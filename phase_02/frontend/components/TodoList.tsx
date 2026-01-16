@@ -1,3 +1,38 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -86,100 +121,78 @@ export default function TodoList() {
   }
 
   return (
-    <div style={{ maxWidth: '600px', margin: '20px auto', padding: '20px' }}>
-      <h2>Your Todos</h2>
-      
+    <div className="max-w-2xl mx-auto p-6">
+      <h2 className="text-2xl font-bold mb-6">Your Todos</h2>
+
       {error && (
-        <div style={{ color: 'red', padding: '10px', backgroundColor: '#ffe6e6', borderRadius: '4px', marginBottom: '10px' }}>
+        <div className="p-3 bg-red-50 text-red-700 rounded-md mb-4">
           {error}
         </div>
       )}
-      
-      <form onSubmit={handleCreateTodo} style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+
+      <form onSubmit={handleCreateTodo} className="flex flex-col gap-3 mb-6">
         <input
           type="text"
           value={newTodo.title}
           onChange={(e) => setNewTodo({...newTodo, title: e.target.value})}
           placeholder="Todo title"
           required
-          style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+          className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <textarea
           value={newTodo.description}
           onChange={(e) => setNewTodo({...newTodo, description: e.target.value})}
           placeholder="Todo description (optional)"
-          style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', minHeight: '60px' }}
+          className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[60px]"
         />
-        <button 
-          type="submit" 
-          style={{ 
-            padding: '10px', 
-            backgroundColor: '#0070f3', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '4px', 
-            cursor: 'pointer' 
-          }}
+        <button
+          type="submit"
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           Add Todo
         </button>
       </form>
-      
+
       {loading ? (
-        <div>Loading todos...</div>
+        <div className="text-center py-4">Loading todos...</div>
       ) : todos.length === 0 ? (
-        <div>No todos yet. Add one above!</div>
+        <div className="text-center py-4">No todos yet. Add one above!</div>
       ) : (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
+        <ul className="list-none p-0">
           {todos.map(todo => (
-            <li 
-              key={todo.id} 
-              style={{ 
-                padding: '15px', 
-                marginBottom: '10px', 
-                border: '1px solid #ddd', 
-                borderRadius: '4px',
-                backgroundColor: todo.completed ? '#f0f0f0' : 'white'
-              }}
+            <li
+              key={todo.id}
+              className={`p-4 mb-3 border border-gray-300 rounded-lg ${todo.completed ? 'bg-gray-100' : 'bg-white'}`}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="flex justify-between items-center">
                 <div>
-                  <h3 style={{ margin: 0, textDecoration: todo.completed ? 'line-through' : 'none' }}>
+                  <h3 className={`${todo.completed ? 'line-through' : ''} font-medium`}>
                     {todo.title}
                   </h3>
                   {todo.description && (
-                    <p style={{ margin: '5px 0 0 0', color: '#666' }}>{todo.description}</p>
+                    <p className="text-gray-600 mt-1">{todo.description}</p>
                   )}
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div className="flex gap-2">
                   <button
                     onClick={() => handleToggleTodo(todo.id, todo.completed)}
-                    style={{ 
-                      padding: '5px 10px', 
-                      backgroundColor: todo.completed ? '#28a745' : '#ffc107', 
-                      border: 'none', 
-                      borderRadius: '4px', 
-                      cursor: 'pointer' 
-                    }}
+                    className={`px-3 py-1 rounded-md ${
+                      todo.completed
+                        ? 'bg-green-500 hover:bg-green-600'
+                        : 'bg-yellow-500 hover:bg-yellow-600'
+                    } text-white`}
                   >
                     {todo.completed ? 'Undo' : 'Complete'}
                   </button>
                   <button
                     onClick={() => handleDeleteTodo(todo.id)}
-                    style={{ 
-                      padding: '5px 10px', 
-                      backgroundColor: '#dc3545', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '4px', 
-                      cursor: 'pointer' 
-                    }}
+                    className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600"
                   >
                     Delete
                   </button>
                 </div>
               </div>
-              <small style={{ color: '#999', display: 'block', marginTop: '5px' }}>
+              <small className="text-gray-500 block mt-2">
                 Created: {new Date(todo.created_at).toLocaleString()}
               </small>
             </li>

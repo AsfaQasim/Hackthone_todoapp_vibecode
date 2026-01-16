@@ -1,0 +1,24 @@
+"""
+Simple guide to create a demo user in your database for testing purposes.
+
+Since your backend uses SQLAlchemy and has a User model, you can create a demo user manually:
+
+1. Connect to your database using a database management tool
+2. Insert a record into the "user" table with these values:
+   - email: demo@example.com
+   - name: Demo User
+   - password: (hashed version of "demo123")
+
+For testing purposes, you can use this plain text password temporarily:
+   - Email: demo@example.com
+   - Password: demo123
+
+Note: In production, passwords should always be properly hashed using bcrypt or similar.
+"""
+
+print("Demo User Setup Guide")
+print("=" * 30)
+print("Email: demo@example.com")
+print("Password: demo123")
+print("\nUse these credentials to test the login functionality.")
+print("Make sure your backend server is running on http://localhost:8000")

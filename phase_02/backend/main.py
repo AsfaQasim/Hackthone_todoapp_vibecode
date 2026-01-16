@@ -1,41 +1,68 @@
-from fastapi import FastAPI, HTTPException, Depends, status, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional
-import os
 from dotenv import load_dotenv
-from utils.jwt_handler import require_auth, TokenData
-from api.todos import router as todos_router
-from api.task_routes import router as task_router
-from utils.init_db import create_db_and_tables
+import os
 
 # Load environment variables
 load_dotenv()
 
-# Initialize FastAPI app
 app = FastAPI(
     title="Todo API",
     description="Secure Todo API with JWT authentication and user isolation",
     version="1.0.0"
 )
 
-# Add CORS middleware to allow requests from frontend
+# Configure CORS for Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend domain
+    allow_origins=[
+        "http://localhost:3000",      # Next.js development server
+        "http://127.0.0.1:3000",      # Alternative localhost
+        "http://localhost:3001",      # Alternative Next.js port
+        "http://127.0.0.1:3001",      # Alternative localhost
+        # Add your production domain when deploying
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],              # In production, specify only required methods
+    allow_headers=["*"],              # In production, specify only required headers
 )
 
-# Create database tables on startup
-@app.on_event("startup")
-def on_startup():
-    create_db_and_tables()
+def warm_up_database():
+    """Warm up the database connection to minimize Neon cold-start issues"""
+    try:
+        # Import here to avoid circular imports
+        from utils.db import get_session
+        from models.todo_models import User
+        from sqlmodel import select
+        
+        # Create a simple database session to establish connection
+        for db in get_session():
+            # Execute a simple query to warm up the connection
+            db.execute(select(User).limit(1))
+            break  # Only need to execute once
+        print("✅ Database connection warmed up successfully")
+    except Exception as e:
+        print(f"⚠️ Database warm-up failed: {e}")
+        print("This might be normal if no users exist yet")
 
-# Include todo routes
-app.include_router(todos_router)
-# Include task routes (Spec 2)
+@app.on_event("startup")
+def startup_event():
+    """Initialize database and warm up connections on startup"""
+    # Create database tables
+    from sqlmodel import SQLModel
+    from utils.db import engine
+    SQLModel.metadata.create_all(bind=engine)
+    
+    # Warm up database connection
+    warm_up_database()
+    
+    print("🚀 Todo API started successfully")
+
+# Include your routers after CORS configuration
+from api.auth_routes import router as auth_router
+from api.task_routes import router as task_router
+
+app.include_router(auth_router)
 app.include_router(task_router)
 
 # Health check endpoint

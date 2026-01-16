@@ -14,7 +14,16 @@ class Task(TaskBase, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-class TaskCreate(TaskBase):
+class TaskCreateBase(SQLModel):
+    title: str = Field(min_length=1)
+    description: Optional[str] = Field(default=None)
+    completed: bool = Field(default=False)
+
+class TaskCreate(TaskCreateBase):
+    user_id: str = Field(min_length=1)  # Backend sets this from auth token
+
+class TaskCreateRequest(TaskCreateBase):
+    """Schema for task creation requests - does not include user_id"""
     pass
 
 class TaskUpdate(SQLModel):

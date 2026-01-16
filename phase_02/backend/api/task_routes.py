@@ -1,171 +1,113 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Path
-from sqlmodel import Session
+from fastapi import APIRouter, HTTPException, status, Depends
+from sqlmodel import Session, select
 from typing import List
 from utils.db import get_session
-from utils.jwt_handler import require_auth, TokenData
-from models.task_model import Task, TaskCreate, TaskUpdate, TaskRead
-from api.task_service import (
-    create_task, get_tasks_by_user, get_task_by_id_and_user, 
-    update_task, delete_task, toggle_task_completion
-)
+from models.todo_models import Task, TaskCreate, TaskUpdate, TaskRead
+from utils.jwt_handler import verify_token
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-router = APIRouter(prefix="/api/{user_id}", tags=["tasks"])
+router = APIRouter(tags=["tasks"])
+security = HTTPBearer()
 
-@router.get("/tasks", response_model=List[TaskRead])
-async def list_tasks(
-    user_id: str,
-    current_user: TokenData = Depends(require_auth),
+def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get the current user ID from the JWT token"""
+    token = credentials.credentials
+    payload = verify_token(token)
+    if payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user_id = payload.get("user_id")
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user_id
+
+@router.post("/api/tasks", response_model=TaskRead)
+async def create_task(
+    task: TaskCreate,
+    current_user_id: str = Depends(get_current_user_id),
     session: Session = Depends(get_session)
 ):
     """
-    List all tasks for the authenticated user.
-    Ownership enforcement: Only the authenticated user can access their own tasks.
+    Create a new task for the logged-in user
     """
-    # Verify that the requested user_id matches the authenticated user_id
-    if current_user.user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: Cannot access another user's tasks"
-        )
-    
-    tasks = get_tasks_by_user(session, user_id)
+    # Create task with the current user's ID
+    db_task = Task(
+        title=task.title,
+        completed=task.completed,
+        user_id=current_user_id
+    )
+    session.add(db_task)
+    session.commit()
+    session.refresh(db_task)
+    return db_task
+
+@router.get("/api/tasks", response_model=List[TaskRead])
+async def get_tasks(
+    current_user_id: str = Depends(get_current_user_id),
+    session: Session = Depends(get_session)
+):
+    """
+    Get all tasks for the logged-in user
+    """
+    statement = select(Task).where(Task.user_id == current_user_id)
+    tasks = session.exec(statement).all()
     return tasks
 
-@router.post("/tasks", response_model=TaskRead)
-async def create_new_task(
-    user_id: str,
-    task_create: TaskCreate,
-    current_user: TokenData = Depends(require_auth),
-    session: Session = Depends(get_session)
-):
-    """
-    Create a new task for the authenticated user.
-    Ownership enforcement: Only the authenticated user can create tasks for themselves.
-    """
-    # Verify that the requested user_id matches the authenticated user_id
-    if current_user.user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: Cannot create tasks for another user"
-        )
-    
-    # Ensure the task is assigned to the authenticated user
-    task_create.user_id = user_id
-    
-    try:
-        task = create_task(session, task_create)
-        return task
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Error creating task: {str(e)}"
-        )
-
-@router.get("/tasks/{task_id}", response_model=TaskRead)
-async def get_task(
-    user_id: str,
-    task_id: str = Path(..., description="The ID of the task to retrieve"),
-    current_user: TokenData = Depends(require_auth),
-    session: Session = Depends(get_session)
-):
-    """
-    Get details of a specific task.
-    Ownership enforcement: Only the task owner can access the task.
-    """
-    # Verify that the requested user_id matches the authenticated user_id
-    if current_user.user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: Cannot access another user's tasks"
-        )
-    
-    task = get_task_by_id_and_user(session, task_id, user_id)
-    if not task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found or you don't have permission to access it"
-        )
-    
-    return task
-
-@router.put("/tasks/{task_id}", response_model=TaskRead)
-async def update_existing_task(
-    user_id: str,
-    task_id: str = Path(..., description="The ID of the task to update"),
+@router.put("/api/tasks/{task_id}", response_model=TaskRead)
+async def update_task(
+    task_id: str,
     task_update: TaskUpdate,
-    current_user: TokenData = Depends(require_auth),
+    current_user_id: str = Depends(get_current_user_id),
     session: Session = Depends(get_session)
 ):
     """
-    Update a specific task.
-    Ownership enforcement: Only the task owner can update the task.
+    Update a task for the logged-in user
     """
-    # Verify that the requested user_id matches the authenticated user_id
-    if current_user.user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: Cannot update another user's tasks"
-        )
+    statement = select(Task).where(Task.id == task_id, Task.user_id == current_user_id)
+    db_task = session.exec(statement).first()
     
-    updated_task = update_task(session, task_id, user_id, task_update)
-    if not updated_task:
+    if not db_task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found or you don't have permission to update it"
+            detail="Task not found"
         )
     
-    return updated_task
+    # Update task fields
+    if task_update.title is not None:
+        db_task.title = task_update.title
+    if task_update.completed is not None:
+        db_task.completed = task_update.completed
+    
+    session.add(db_task)
+    session.commit()
+    session.refresh(db_task)
+    return db_task
 
-@router.delete("/tasks/{task_id}")
-async def delete_existing_task(
-    user_id: str,
-    task_id: str = Path(..., description="The ID of the task to delete"),
-    current_user: TokenData = Depends(require_auth),
+@router.delete("/api/tasks/{task_id}")
+async def delete_task(
+    task_id: str,
+    current_user_id: str = Depends(get_current_user_id),
     session: Session = Depends(get_session)
 ):
     """
-    Delete a specific task.
-    Ownership enforcement: Only the task owner can delete the task.
+    Delete a task for the logged-in user
     """
-    # Verify that the requested user_id matches the authenticated user_id
-    if current_user.user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: Cannot delete another user's tasks"
-        )
+    statement = select(Task).where(Task.id == task_id, Task.user_id == current_user_id)
+    db_task = session.exec(statement).first()
     
-    success = delete_task(session, task_id, user_id)
-    if not success:
+    if not db_task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found or you don't have permission to delete it"
+            detail="Task not found"
         )
     
+    session.delete(db_task)
+    session.commit()
     return {"message": "Task deleted successfully"}
-
-@router.patch("/tasks/{task_id}/complete", response_model=TaskRead)
-async def toggle_task_completion_status(
-    user_id: str,
-    task_id: str = Path(..., description="The ID of the task to toggle completion for"),
-    current_user: TokenData = Depends(require_auth),
-    session: Session = Depends(get_session)
-):
-    """
-    Toggle the completion status of a task.
-    Ownership enforcement: Only the task owner can toggle completion status.
-    """
-    # Verify that the requested user_id matches the authenticated user_id
-    if current_user.user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: Cannot modify another user's tasks"
-        )
-    
-    toggled_task = toggle_task_completion(session, task_id, user_id)
-    if not toggled_task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found or you don't have permission to modify it"
-        )
-    
-    return toggled_task

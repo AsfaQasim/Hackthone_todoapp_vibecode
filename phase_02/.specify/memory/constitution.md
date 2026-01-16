@@ -1,106 +1,55 @@
-# Hackathon Phase II – Multi-User Todo Web Application Constitution
-<!--
-Sync Impact Report
-- Version change: 0.0.0 → 0.1.0
-- Modified principles: N/A (template placeholders replaced)
-- Added sections: Additional Constraints, Development Workflow
-- Removed sections: None
-- Templates requiring updates:
-  - ✅ .specify/templates/plan-template.md (uses constitution gates; no hardcoded gates)
-  - ✅ .specify/templates/spec-template.md (no conflicts)
-  - ✅ .specify/templates/tasks-template.md (no conflicts)
-  - ⚠ pending: .specify/templates/commands/*.md (not reviewed yet)
-  - ⚠ pending: repository runtime docs (README, quickstart) not found in repo root
-- Deferred TODOs:
-  - TODO(RATIFICATION_DATE): original adoption date unknown; set to today for now
--->
+# [PROJECT_NAME] Constitution
+<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
 
 ## Core Principles
 
-### Security-first: no unauthenticated access
-All protected API routes MUST require a valid JWT. Requests without a valid token MUST return
-HTTP 401.
+### [PRINCIPLE_1_NAME]
+<!-- Example: I. Library-First -->
+[PRINCIPLE_1_DESCRIPTION]
+<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
 
-Rationale: the system’s baseline security posture is “deny by default”; all access is explicit.
+### [PRINCIPLE_2_NAME]
+<!-- Example: II. CLI Interface -->
+[PRINCIPLE_2_DESCRIPTION]
+<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
 
-### Stateless authentication via JWT
-JWTs MUST be issued by Better Auth on the Next.js frontend and MUST be verified by the
-FastAPI backend using a shared secret.
+### [PRINCIPLE_3_NAME]
+<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
+[PRINCIPLE_3_DESCRIPTION]
+<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
 
-Token verification MUST include:
-- Signature validation
-- Expiry validation
-- Payload decoding
+### [PRINCIPLE_4_NAME]
+<!-- Example: IV. Integration Testing -->
+[PRINCIPLE_4_DESCRIPTION]
+<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
 
-Rationale: the backend must be able to authenticate requests independently without calling
-the frontend.
+### [PRINCIPLE_5_NAME]
+<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
+[PRINCIPLE_5_DESCRIPTION]
+<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
 
-### Strict user isolation at the API + database layer
-User identity MUST be derived ONLY from the verified JWT payload.
+### [PRINCIPLE_6_NAME]
 
-All database queries MUST be filtered by the authenticated user ID.
-Task ownership MUST be enforced at every operation.
 
-Rationale: user isolation is a security boundary; it must be enforced consistently across all
-CRUD operations.
+[PRINCIPLE__DESCRIPTION]
 
-### Backend trust through cryptographic verification
-FastAPI backend NEVER trusts the frontend session directly.
+## [SECTION_2_NAME]
+<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
 
-Rationale: cryptographic verification (JWT) is the trust primitive; not UI state.
+[SECTION_2_CONTENT]
+<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
 
-### Spec-driven, reproducible behavior
-Authentication and authorization behavior MUST be specified in a testable way:
-- Missing/invalid token → 401
-- Authenticated user can access only their own resources
-- Mismatched `user_id` → 403
+## [SECTION_3_NAME]
+<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
 
-Rationale: security behavior must be reproducible across environments and implementations.
-
-### Technology constraints are non-negotiable
-- Frontend: Next.js 16+ (App Router)
-- Authentication: Better Auth (JWT plugin enabled)
-- Backend: Python FastAPI
-- JWT Library: industry-standard JWT verification
-- Database: Neon Serverless PostgreSQL
-- ORM: SQLModel
-- Spec-driven tooling: Claude Code + Spec-Kit Plus
-
-## Additional Constraints
-
-### Shared secret constraint
-- JWT signing and verification MUST use the same secret key.
-- Secret MUST be provided via environment variable: `BETTER_AUTH_SECRET`.
-- Secret MUST NOT be hardcoded in source files.
-- Both frontend and backend MUST fail startup if the secret is missing.
-
-### Authorization binding to URL path
-- URL `user_id` MUST match authenticated `user_id`.
-- Requests with mismatched `user_id` MUST return HTTP 403.
-
-## Development Workflow
-
-### Implementation placement
-JWT verification MUST be implemented as a FastAPI middleware or dependency that:
-- Extracts the `Authorization` header
-- Validates the JWT
-- Attaches authenticated user context to the request
-
-### Quality gates (security)
-- No endpoint may bypass authentication.
-- No user may access or mutate another user’s data.
-- Backend MUST be stateless (no session storage).
-- Token expiry MUST be enforced (recommended: ≤ 7 days).
+[SECTION_3_CONTENT]
+<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
 
 ## Governance
+<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-- This constitution supersedes other practices and templates when in conflict.
-- Amendments MUST:
-  - increment the constitution version (semantic versioning)
-  - describe the change in a Sync Impact Report (at top of this file)
-  - be reviewed for downstream template implications
-- Compliance review expectation:
-  - security-affecting changes MUST be reviewed for authn/authz regressions
-  - PRs SHOULD reference which principles they touch
+[GOVERNANCE_RULES]
+<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
 
-**Version**: 0.1.0 | **Ratified**: 2026-01-08 | **Last Amended**: 2026-01-08
+**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
+<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
