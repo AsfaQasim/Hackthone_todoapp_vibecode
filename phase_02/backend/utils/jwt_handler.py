@@ -1,50 +1,92 @@
-from datetime import datetime, timedelta
-from typing import Optional
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+import jwt
 import os
-from dotenv import load_dotenv
+from datetime import datetime, timedelta
+from typing import Optional, Dict, Any
+from fastapi import HTTPException, status
 
-# Load environment variables
-load_dotenv()
 
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+class JWTHandler:
+    """
+    JWT Handler class for creating and verifying JWT tokens
+    following the Better Auth integration specification.
+    """
+    
+    def __init__(self):
+        # Use the same secret key as Better Auth for compatibility
+        self.SECRET_KEY = os.getenv("BETTER_AUTH_SECRET", "fallback_dev_secret_for_testing_only")
+        if self.SECRET_KEY == "fallback_dev_secret_for_testing_only":
+            print("WARNING: Using fallback secret key. Set BETTER_AUTH_SECRET environment variable for production.")
+        
+        self.ALGORITHM = "HS256"
+        self.ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days expiry as per spec
+    
+    def create_access_token(self, data: dict) -> str:
+        """
+        Create a JWT access token with the provided data
+        """
+        to_encode = data.copy()
+        expire = datetime.utcnow() + timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES)
+        to_encode.update({"exp": expire})
+        
+        encoded_jwt = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
+        return encoded_jwt
+    
+    def verify_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """
+        Verify a JWT token and return the payload if valid
+        """
+        try:
+            payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
+            
+            # Extract required fields - Better Auth may use different field names
+            user_id: str = payload.get("userId") or payload.get("user_id") or payload.get("sub")
+            email: str = payload.get("email") or payload.get("user_email")
+            exp_timestamp: int = payload.get("exp")
 
-# Secret key for JWT
-SECRET_KEY = os.getenv("JWT_SECRET")
-if not SECRET_KEY:
-    raise ValueError("JWT_SECRET environment variable is not set. Please check your .env file.")
+            # Validate required fields exist
+            if not user_id or not email or exp_timestamp is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token missing required fields"
+                )
+            
+            # Check if token is expired
+            current_time = datetime.utcnow().timestamp()
+            if current_time > exp_timestamp:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token has expired"
+                )
+            
+            # Return user info
+            return {
+                "user_id": user_id,
+                "email": email,
+                "exp": exp_timestamp
+            }
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has expired"
+            )
+        except jwt.InvalidTokenError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Token verification error: {str(e)}"
+            )
 
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a plain password against a hashed password"""
-    return pwd_context.verify(plain_password, hashed_password)
+# Global instance
+jwt_handler = JWTHandler()
 
-def get_password_hash(password: str) -> str:
-    """Hash a password using bcrypt"""
-    return pwd_context.hash(password)
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    """Create a JWT access token"""
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-def verify_token(token: str):
-    """Verify a JWT token and return the payload"""
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("user_id")
-        if user_id is None:
-            return None
-        return payload
-    except JWTError:
-        return None
+def get_current_user(token: str) -> Dict[str, Any]:
+    """
+    Dependency function to get current user from token
+    """
+    return jwt_handler.verify_token(token)

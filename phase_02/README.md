@@ -64,10 +64,34 @@ This will create a user with:
 - Email: `demo@example.com`
 - Password: `demo123`
 
+### Authentication & User Isolation
+The application implements a secure, stateless authentication system:
+
+- JWT-based authentication using Better Auth on the frontend
+- Cryptographic verification of JWT tokens on the backend
+- User isolation at the API level - users can only access their own data
+- All protected endpoints require a valid JWT token
+- Requests without valid tokens return HTTP 401
+- Requests with mismatched user IDs return HTTP 403
+
+### API Endpoints
+
+The application provides the following API endpoints:
+
+- `GET /health` - Health check
+- `GET /profile` - Get authenticated user profile (requires JWT)
+- `GET /todos/` - Get all todos for the authenticated user (requires JWT)
+- `POST /todos/` - Create a new todo (requires JWT)
+- `GET /todos/{id}` - Get a specific todo (requires JWT)
+- `PUT /todos/{id}` - Update a specific todo (requires JWT)
+- `DELETE /todos/{id}` - Delete a specific todo (requires JWT)
+- `DELETE /todos/` - Delete all todos for the authenticated user (requires JWT)
+
 ### Features
 - Beautiful UI with gradient backgrounds and modern design
 - Authentication with login/logout functionality
 - Task management (create, read, update, delete tasks)
+- Secure user isolation - users can only access their own data
 - Responsive design for all screen sizes
 - Real-time task management
 
@@ -75,4 +99,4 @@ This will create a user with:
 - Make sure both backend and frontend servers are running
 - Check that the ports are correct (backend: 8000, frontend: 3000)
 - Verify that your database connection is working
-- Ensure environment variables are properly set
+- Ensure environment variables are properly set, especially `BETTER_AUTH_SECRET`

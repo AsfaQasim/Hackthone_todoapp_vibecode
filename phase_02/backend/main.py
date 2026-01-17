@@ -1,75 +1,93 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
+from contextlib import asynccontextmanager
 import os
+from middleware.auth_middleware import JWTBearer, verify_user_is_authenticated
+from routes import auth, tasks, todos
 
-# Load environment variables
-load_dotenv()
+ # Import the todos, auth, and tasks routers
+from database.engine import create_db_and_tables
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan event handler to validate required environment variables on startup
+    and initialize database tables
+    """
+    # Check if BETTER_AUTH_SECRET is set
+    if not os.getenv("BETTER_AUTH_SECRET"):
+        print("WARNING: BETTER_AUTH_SECRET environment variable is not set.")
+        print("Using fallback secret for development. Set BETTER_AUTH_SECRET for production.")
+
+    # Initialize database tables
+    print("Initializing database tables...")
+    create_db_and_tables()
+    print("Database tables initialized successfully.")
+
+    yield
+
+    # Cleanup on shutdown if needed
+    print("Shutting down...")
+
+
+# Initialize FastAPI app with lifespan
 app = FastAPI(
-    title="Todo API",
-    description="Secure Todo API with JWT authentication and user isolation",
-    version="1.0.0"
+    title="Todo API with JWT Authentication",
+    description="Secure Todo API with Better Auth JWT integration",
+    version="1.0.0",
+    lifespan=lifespan
 )
 
-# Configure CORS for Next.js frontend
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",      # Next.js development server
-        "http://127.0.0.1:3000",      # Alternative localhost
-        "http://localhost:3001",      # Alternative Next.js port
-        "http://127.0.0.1:3001",      # Alternative localhost
-        # Add your production domain when deploying
-    ],
+    allow_origins=["*"],  # In production, specify your frontend domain
     allow_credentials=True,
-    allow_methods=["*"],              # In production, specify only required methods
-    allow_headers=["*"],              # In production, specify only required headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-def warm_up_database():
-    """Warm up the database connection to minimize Neon cold-start issues"""
-    try:
-        # Import here to avoid circular imports
-        from utils.db import get_session
-        from models.todo_models import User
-        from sqlmodel import select
-        
-        # Create a simple database session to establish connection
-        for db in get_session():
-            # Execute a simple query to warm up the connection
-            db.execute(select(User).limit(1))
-            break  # Only need to execute once
-        print("✅ Database connection warmed up successfully")
-    except Exception as e:
-        print(f"⚠️ Database warm-up failed: {e}")
-        print("This might be normal if no users exist yet")
+# Include the routers
+app.include_router(todos.router, prefix="/todos", tags=["todos"])
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(tasks.router)  # Tasks API with prefixed routes
 
-@app.on_event("startup")
-def startup_event():
-    """Initialize database and warm up connections on startup"""
-    # Create database tables
-    from sqlmodel import SQLModel
-    from utils.db import engine
-    SQLModel.metadata.create_all(bind=engine)
-    
-    # Warm up database connection
-    warm_up_database()
-    
-    print("🚀 Todo API started successfully")
 
-# Include your routers after CORS configuration
-from api.auth_routes import router as auth_router
-from api.task_routes import router as task_router
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the Todo API with JWT Authentication"}
 
-app.include_router(auth_router)
-app.include_router(task_router)
 
-# Health check endpoint
 @app.get("/health")
-async def health_check():
-    return {"status": "healthy", "message": "Todo API is running"}
+def health_check():
+    return {"status": "healthy", "service": "todo-api"}
+
+
+# Protected endpoint example - requires authentication
+@app.get("/profile", dependencies=[Depends(JWTBearer())])
+def get_profile(current_user=Depends(verify_user_is_authenticated)):
+    return {
+        "user_id": current_user["user_id"],
+        "email": current_user["email"],
+        "message": "Profile accessed successfully"
+    }
+
+
+# Global exception handler for unauthorized access
+@app.exception_handler(status.HTTP_401_UNAUTHORIZED)
+async def unauthorized_exception_handler(request, exc):
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Unauthorized: Invalid or missing authentication token"
+    )
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True
+    )

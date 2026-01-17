@@ -1,7 +1,22 @@
-import { toNodeHandler } from "better-auth/node"
-import { auth } from "@/lib/auth"
+import { betterAuth } from 'better-auth';
+import { bearer } from 'better-auth/plugins';
 
-// Disallow body parsing, we will parse it manually
-export const config = { api: { bodyParser: false } }
+export const auth = betterAuth({
+  database: {
+    provider: 'sqlite',
+    url: process.env.DATABASE_URL || './db.sqlite',
+  },
+  secret: process.env.BETTER_AUTH_SECRET,
+  plugins: [
+    bearer({
+      enabled: true,
+    })
+  ],
+  // Add email/password authentication
+  emailAndPassword: {
+    enabled: true,
+    requireEmailVerification: false,
+  },
+});
 
-export default toNodeHandler(auth.handler)
+export default auth;
