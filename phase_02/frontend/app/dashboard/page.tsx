@@ -1,12 +1,12 @@
 'use client';
 
-import { useSession } from 'better-auth/react';
+import { useAuth } from '../../components/AuthProvider';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function DashboardPage() {
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending } = useAuth().useSession();
   const router = useRouter();
 
   useEffect(() => {

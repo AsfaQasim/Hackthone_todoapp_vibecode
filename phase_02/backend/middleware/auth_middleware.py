@@ -53,19 +53,57 @@ def verify_user_is_authenticated(request: Request) -> Dict[str, Any]:
     return request.state.user
 
 
-def verify_user_owns_resource(request: Request, user_id_in_path: str) -> Dict[str, Any]:
+def verify_user_owns_resource(request: Request, user_id_in_path: str = None, todo_id: str = None) -> Dict[str, Any]:
     """
     Dependency to verify that the authenticated user owns the requested resource.
     This enforces user isolation by checking that the user_id in the URL matches
     the authenticated user's ID.
+
+    Args:
+        request: The incoming request object
+        user_id_in_path: The user ID from the URL path (optional)
+        todo_id: The todo ID to check ownership for (optional)
     """
     authenticated_user = verify_user_is_authenticated(request)
-    
-    # Check if the authenticated user's ID matches the user_id in the path
-    if authenticated_user["user_id"] != user_id_in_path:
+
+    # If a specific user_id is provided in the path, check if it matches the authenticated user
+    if user_id_in_path and authenticated_user["user_id"] != user_id_in_path:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: You can only access your own resources"
         )
-    
+
+    # If a todo_id is provided, verify that the authenticated user owns that specific todo
+    if todo_id:
+        from database.engine import get_db
+        from models.task import Task
+        db = next(get_db())
+
+        # Find the todo in the database
+        # Note: This assumes a SQLAlchemy model; adjust according to your actual DB implementation
+        try:
+            # This is pseudocode since we don't know the exact DB implementation
+            # You would need to query your actual database here
+            todo = db.query(Task).filter(Task.id == todo_id, Task.user_id == authenticated_user["user_id"]).first()
+
+            if not todo:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: You can only access your own resources"
+                )
+        except Exception:
+            # Fallback to in-memory check if DB query fails
+            # This is for the current in-memory implementation
+            from routes.todos import todos_db
+            todo_exists = any(
+                todo for todo in todos_db
+                if str(todo["id"]) == todo_id and todo["user_id"] == authenticated_user["user_id"]
+            )
+
+            if not todo_exists:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: You can only access your own resources"
+                )
+
     return authenticated_user

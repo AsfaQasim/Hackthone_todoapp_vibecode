@@ -1,6 +1,6 @@
 'use client';
 
-import { auth } from '@/lib/auth-client';
+import { auth } from '../lib/auth-client';
 import { useRouter } from 'next/navigation';
 
 export default function LogoutButton() {

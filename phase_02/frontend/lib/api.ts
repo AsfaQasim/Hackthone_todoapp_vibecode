@@ -1,17 +1,21 @@
-import { auth } from './auth';
+import { auth } from './auth-client'; // Use the client-side auth instance
 
 export async function authenticatedRequest(url: string, options: RequestInit = {}) {
+  // Get the session using the client-side auth instance
   const session = await auth.getSession();
 
-  if (!session) {
+  if (!session || !session.session) {
     throw new Error('Not authenticated');
   }
+
+  // Extract the session token - Better Auth typically stores it in session.session.token
+  const token = session.session.token || session.session.id;
 
   const fetchOptions = {
     ...options,
     headers: {
       ...options.headers,
-      'Authorization': `Bearer ${session.accessToken}`,
+      'Authorization': `Bearer ${token}`, // Attach the token as Bearer
       'Content-Type': 'application/json',
     },
   };
@@ -22,8 +26,8 @@ export async function authenticatedRequest(url: string, options: RequestInit = {
 // Generic function to make API calls with error handling
 export async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
   try {
-    const url = `${process.env.NEXT_PUBLIC_API_URL}${endpoint}`;
-    
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${endpoint}`;
+
     if (options?.headers && Object.keys(options.headers).some(key => key.toLowerCase() === 'authorization')) {
       // If authorization header is already provided, use it directly
       return await fetch(url, options).then(response => {
@@ -35,11 +39,11 @@ export async function apiCall<T>(endpoint: string, options?: RequestInit): Promi
     } else {
       // Otherwise, use authenticated request
       const response = await authenticatedRequest(url, options);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       return await response.json();
     }
   } catch (error) {

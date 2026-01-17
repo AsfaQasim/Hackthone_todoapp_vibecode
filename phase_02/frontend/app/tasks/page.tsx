@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'better-auth/react';
+import { useAuth } from '../../components/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { Task } from '@/types/task';
 import { apiCall } from '../../lib/api';
@@ -9,7 +9,7 @@ import CreateTaskForm from '../../components/task/CreateTaskForm';
 import TaskItem from '../../components/task/TaskItem';
 
 export default function TasksPage() {
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending } = useAuth().useSession();
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);

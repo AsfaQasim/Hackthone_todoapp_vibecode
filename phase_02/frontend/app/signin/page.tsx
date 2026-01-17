@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '../../lib/auth';
+import { auth } from '../../lib/auth-client';
 
 export default function SigninPage() {
   const [email, setEmail] = useState('');
@@ -17,11 +17,11 @@ export default function SigninPage() {
     setError(null);
 
     try {
-      // Sign in using Better Auth
+      // Sign in using Better Auth client
       const result = await auth.signIn.email({
         email,
         password,
-        callbackURL: '/dashboard' // Redirect to dashboard after login
+        redirectTo: '/dashboard' // Redirect to dashboard after login
       });
 
       if (result?.error) {

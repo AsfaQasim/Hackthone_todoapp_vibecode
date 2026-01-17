@@ -2,6 +2,9 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 from middleware.auth_middleware import JWTBearer, verify_user_is_authenticated
 from routes import auth, tasks, todos
 
@@ -17,8 +20,11 @@ async def lifespan(app: FastAPI):
     """
     # Check if BETTER_AUTH_SECRET is set
     if not os.getenv("BETTER_AUTH_SECRET"):
-        print("WARNING: BETTER_AUTH_SECRET environment variable is not set.")
-        print("Using fallback secret for development. Set BETTER_AUTH_SECRET for production.")
+        raise RuntimeError(
+            "BETTER_AUTH_SECRET environment variable is not set.\n"
+            "Please set BETTER_AUTH_SECRET for production use.\n"
+            "For development, add 'BETTER_AUTH_SECRET=dev_secret_for_testing_only' to your environment."
+        )
 
     # Initialize database tables
     print("Initializing database tables...")
@@ -42,7 +48,11 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend domain
+    allow_origins=[
+        "http://localhost:3000",  # Next.js default development server
+        "http://localhost:3001",  # Alternative Next.js port
+        "https://yourdomain.com"   # Production domain - replace with actual domain
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '../../lib/auth';
+import { auth } from '../../lib/auth-client';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -18,7 +18,7 @@ export default function SignupPage() {
     setError(null);
 
     try {
-      // Sign up using Better Auth
+      // Sign up using Better Auth client
       const result = await auth.signUp.email({
         email,
         password,
