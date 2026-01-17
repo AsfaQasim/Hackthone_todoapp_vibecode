@@ -4,10 +4,16 @@ import type { NextRequest } from 'next/server';
 
 // Define protected routes
 const protectedRoutes = ['/dashboard', '/todos', '/profile', '/settings'];
+const authRoutes = ['/signin', '/signup'];
 
 export function middleware(request: NextRequest) {
   // Check if the route is protected
   const isProtectedRoute = protectedRoutes.some(route =>
+    request.nextUrl.pathname.startsWith(route)
+  );
+
+  // Check if the route is an auth route
+  const isAuthRoute = authRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)
   );
 
@@ -24,6 +30,19 @@ export function middleware(request: NextRequest) {
 
     // If user is authenticated, allow the request to continue
     return response;
+  }
+
+  // If user is authenticated and trying to access auth routes, redirect to dashboard
+  if (isAuthRoute) {
+    const response = authMiddleware(request);
+
+    // Check if user is authenticated by looking at the response
+    // If user is authenticated, redirect to dashboard
+    if (response.headers.get('x-better-auth-user')) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/dashboard';
+      return NextResponse.redirect(url);
+    }
   }
 
   // For non-protected routes, continue normally

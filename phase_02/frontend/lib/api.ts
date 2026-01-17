@@ -1,8 +1,8 @@
-import { auth } from './auth-client'; // Use the client-side auth instance
+import { authClient } from './auth-client';
 
 export async function authenticatedRequest(url: string, options: RequestInit = {}) {
   // Get the session using the client-side auth instance
-  const session = await auth.getSession();
+  const session = await authClient.getSession();
 
   if (!session || !session.session) {
     throw new Error('Not authenticated');

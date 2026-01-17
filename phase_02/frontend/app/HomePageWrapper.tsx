@@ -1,11 +1,11 @@
 'use client';
 
-import { useAuth } from '../components/AuthProvider';
+import { useSession } from 'better-auth/react';
 import Link from 'next/link';
 import AuthComponent from '../components/AuthComponent';
 
 export default function HomePageWrapper() {
-  const { data: session, isPending } = useAuth().useSession();
+  const { data: session, isPending } = useSession();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">

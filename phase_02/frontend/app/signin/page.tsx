@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '../../lib/auth-client';
+import { authClient } from '../../lib/auth-client';
 
 export default function SigninPage() {
   const [email, setEmail] = useState('');
@@ -18,7 +18,7 @@ export default function SigninPage() {
 
     try {
       // Sign in using Better Auth client
-      const result = await auth.signIn.email({
+      const result = await authClient.signIn.email({
         email,
         password,
         redirectTo: '/dashboard' // Redirect to dashboard after login

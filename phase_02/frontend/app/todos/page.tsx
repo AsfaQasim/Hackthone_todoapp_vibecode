@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../components/AuthProvider';
+import { useSession } from 'better-auth/react';
 import { useRouter } from 'next/navigation';
 import { apiCall } from '../../lib/api';
 
@@ -16,7 +16,7 @@ interface Todo {
 }
 
 export default function TodosPage() {
-  const { data: session, isPending } = useAuth().useSession();
+  const { data: session, isPending } = useSession();
   const router = useRouter();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState({ title: '', description: '' });

@@ -1,11 +1,11 @@
 "use client";
 
 import Link from 'next/link';
-import { useAuth } from './AuthProvider';
+import { useSession } from 'better-auth/react';
 import LogoutButton from './LogoutButton';
 
 export default function Header() {
-    const { data: session, isPending } = useAuth().useSession();
+    const { data: session, isPending } = useSession();
 
   return (
     <header className="bg-white shadow-sm">

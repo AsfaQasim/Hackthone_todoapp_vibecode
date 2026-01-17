@@ -1,3 +1,4 @@
+"use client"
 import './globals.css';
 // layout.tsx
 import AuthProvider from "../components/AuthProvider"; // ✅
