@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { authClient } from '../../lib/auth-client';
+import { signUp } from '../../lib/auth-client';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -19,14 +19,14 @@ export default function SignupPage() {
 
     try {
       // Sign up using Better Auth client
-      const result = await authClient.signUp.email({
+      const result = await signUp.email({
         email,
         password,
         name,
       });
 
       if (result?.error) {
-        setError(result.error.message);
+        setError(result.error.message || 'Signup failed');
       } else {
         // Redirect to dashboard after successful signup
         router.push('/dashboard');
@@ -46,13 +46,13 @@ export default function SignupPage() {
         <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
           Create an Account
         </h2>
-        
+
         {error && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
             {error}
           </div>
         )}
-        
+
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -68,7 +68,7 @@ export default function SignupPage() {
               required
             />
           </div>
-          
+
           <div className="mb-4">
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Email
@@ -83,7 +83,7 @@ export default function SignupPage() {
               required
             />
           </div>
-          
+
           <div className="mb-4">
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
               Password
@@ -98,25 +98,25 @@ export default function SignupPage() {
               required
             />
           </div>
-          
+
           <button
             type="submit"
             disabled={loading}
             className={`w-full py-2 px-4 rounded-md text-white font-medium ${
-              loading 
-                ? 'bg-indigo-400 cursor-not-allowed' 
+              loading
+                ? 'bg-indigo-400 cursor-not-allowed'
                 : 'bg-indigo-600 hover:bg-indigo-700'
             }`}
           >
             {loading ? 'Creating Account...' : 'Sign Up'}
           </button>
         </form>
-        
+
         <div className="mt-4 text-center">
           <p className="text-gray-600">
             Already have an account?{' '}
-            <a 
-              href="/signin" 
+            <a
+              href="/signin"
               className="text-indigo-600 hover:text-indigo-800 font-medium"
             >
               Sign In

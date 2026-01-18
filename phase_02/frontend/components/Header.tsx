@@ -1,11 +1,13 @@
 "use client";
 
 import Link from 'next/link';
-import { useSession } from 'better-auth/react';
+import { useSession } from '../lib/auth-client';
+import { useAtomValue } from 'jotai';
 import LogoutButton from './LogoutButton';
 
 export default function Header() {
-    const { data: session, isPending } = useSession();
+    const sessionData = useAtomValue(useSession);
+    const { data: session, isPending } = sessionData;
 
   return (
     <header className="bg-white shadow-sm">

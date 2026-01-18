@@ -1,9 +1,9 @@
 export interface Task {
   id: string;
-  user_id: string;
   title: string;
-  description?: string;
+  description: string;
   completed: boolean;
+  user_id: string;
   created_at: string;
   updated_at: string;
 }

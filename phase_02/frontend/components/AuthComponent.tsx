@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { auth } from '../lib/auth-client';
+import { signIn, signUp } from '../lib/auth-client';
 
 interface AuthFormProps {
   onAuthSuccess: () => void;
@@ -23,27 +23,27 @@ export default function AuthComponent({ onAuthSuccess }: AuthFormProps) {
     try {
       if (isLogin) {
         // Login flow
-        const result = await auth.signIn.email({
+        const result = await signIn.email({
           email,
           password,
           callbackURL: '/dashboard' // Redirect to dashboard after login
         });
 
         if (result?.error) {
-          setError(result.error.message);
+          setError(result.error.message || 'Login failed');
         } else {
           onAuthSuccess(); // Notify parent component of successful auth
         }
       } else {
         // Sign up flow
-        const result = await auth.signUp.email({
+        const result = await signUp.email({
           email,
           password,
           name,
         });
 
         if (result?.error) {
-          setError(result.error.message);
+          setError(result.error.message || 'Signup failed');
         } else {
           // Automatically switch to login after successful signup
           setIsLogin(true);

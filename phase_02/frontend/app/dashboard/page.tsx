@@ -1,12 +1,14 @@
 'use client';
 
-import { useSession } from 'better-auth/react';
+import { useSession } from '../../lib/auth-client';
+import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function DashboardPage() {
-  const { data: session, isPending } = useSession();
+  const sessionData = useAtomValue(useSession);
+  const { data: session, isPending } = sessionData;
   const router = useRouter();
 
   useEffect(() => {
@@ -32,7 +34,7 @@ export default function DashboardPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white shadow rounded-lg p-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">Dashboard</h1>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div className="border rounded-lg p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-2">User Information</h2>
@@ -40,7 +42,7 @@ export default function DashboardPage() {
               <p><span className="font-medium">Email:</span> {session.user.email}</p>
               <p><span className="font-medium">Account ID:</span> {session.user.id}</p>
             </div>
-            
+
             <div className="border rounded-lg p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-2">Quick Actions</h2>
               <ul className="space-y-2">
@@ -62,7 +64,7 @@ export default function DashboardPage() {
               </ul>
             </div>
           </div>
-          
+
           <div className="mt-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Recent Activity</h2>
             <div className="bg-gray-50 rounded-lg p-4">

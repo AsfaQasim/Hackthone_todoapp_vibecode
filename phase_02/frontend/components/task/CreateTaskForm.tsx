@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from '../../lib/auth-client';
 import { Task } from '@/types/task';
 import { apiCall } from '../../lib/api';
 
@@ -13,6 +14,7 @@ export default function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { data: session, isPending } = useSession();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,18 +27,14 @@ export default function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
       return;
     }
 
+    if (!session?.user?.id) {
+      setError('User not authenticated');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Get the user ID from the session
-      // For now, we'll assume we can get it from auth
-      // In a real implementation, we'd get the authenticated user's ID
-      const session = await (await import('../../lib/auth')).auth.getSession();
-      if (!session || !session.data?.user?.id) {
-        throw new Error('User not authenticated');
-      }
-
-      const userId = session.data.user.id;
-
-      const newTask = await apiCall<Task>(`/api/${userId}/tasks`, {
+      const newTask = await apiCall<Task>('/api/tasks', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

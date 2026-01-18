@@ -1,6 +1,6 @@
 'use client';
 
-import { auth } from '../lib/auth-client';
+import { signOut } from '../lib/auth-client';
 import { useRouter } from 'next/navigation';
 
 export default function LogoutButton() {
@@ -8,7 +8,7 @@ export default function LogoutButton() {
 
   const handleLogout = async () => {
     try {
-      await auth.signOut();
+      await signOut();
       router.push('/'); // Redirect to home after logout
       router.refresh(); // Refresh the page to update the UI
     } catch (error) {

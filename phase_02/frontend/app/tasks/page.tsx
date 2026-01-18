@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'better-auth/react';
+import { useSession } from '../../lib/auth-client';
+import { useAtomValue } from 'jotai';
 import { useRouter } from 'next/navigation';
 import { Task } from '@/types/task';
 import { apiCall } from '../../lib/api';
@@ -9,7 +10,8 @@ import CreateTaskForm from '../../components/task/CreateTaskForm';
 import TaskItem from '../../components/task/TaskItem';
 
 export default function TasksPage() {
-  const { data: session, isPending } = useSession();
+  const sessionData = useAtomValue(useSession);
+  const { data: session, isPending } = sessionData;
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,11 +30,11 @@ export default function TasksPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       if (!session?.user?.id) {
         throw new Error('User ID not available');
       }
-      
+
       const data = await apiCall<Task[]>(`/api/${session.user.id}/tasks`);
       setTasks(data);
     } catch (err) {
@@ -72,15 +74,15 @@ export default function TasksPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white shadow rounded-lg p-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">My Tasks</h1>
-          
+
           <CreateTaskForm onTaskCreated={handleTaskCreated} />
-          
+
           {error && (
             <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
               {error}
             </div>
           )}
-          
+
           {loading ? (
             <div className="py-4 text-center">
               <p className="text-gray-600">Loading tasks...</p>
@@ -96,9 +98,9 @@ export default function TasksPage() {
               </h2>
               <div className="space-y-2">
                 {tasks.map(task => (
-                  <TaskItem 
-                    key={task.id} 
-                    task={task} 
+                  <TaskItem
+                    key={task.id}
+                    task={task}
                     onUpdate={handleTaskUpdated}
                     onDelete={handleTaskDeleted}
                   />

@@ -1,14 +1,8 @@
-"use client"
 import './globals.css';
 // layout.tsx
 import AuthProvider from "../components/AuthProvider"; // ✅
 
 import Header from '../components/Header';
-
-export const metadata = {
-  title: 'Todo App',
-  description: 'A secure todo application with user authentication',
-};
 
 export default function RootLayout({
   children,

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'better-auth/react';
+import { useSession } from '../../lib/auth-client';
+import { useAtomValue } from 'jotai';
 import { useRouter } from 'next/navigation';
 import { apiCall } from '../../lib/api';
 
@@ -16,7 +17,8 @@ interface Todo {
 }
 
 export default function TodosPage() {
-  const { data: session, isPending } = useSession();
+  const sessionData = useAtomValue(useSession);
+  const { data: session, isPending } = sessionData;
   const router = useRouter();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState({ title: '', description: '' });
@@ -54,7 +56,7 @@ export default function TodosPage() {
         },
         body: JSON.stringify(newTodo),
       });
-      
+
       setTodos([...todos, response]);
       setNewTodo({ title: '', description: '' });
     } catch (err) {
@@ -88,7 +90,7 @@ export default function TodosPage() {
       await apiCall(`/todos/${id}`, {
         method: 'DELETE',
       });
-      
+
       setTodos(todos.filter(t => t.id !== id));
     } catch (err) {
       setError('Failed to delete todo');
@@ -113,7 +115,7 @@ export default function TodosPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white shadow rounded-lg p-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">My Todos</h1>
-          
+
           <form onSubmit={handleAddTodo} className="mb-8 p-4 bg-gray-50 rounded-lg">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="md:col-span-2">

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { authClient } from '../../lib/auth-client';
+import { signIn } from '../../lib/auth-client';
 
 export default function SigninPage() {
   const [email, setEmail] = useState('');
@@ -18,14 +18,14 @@ export default function SigninPage() {
 
     try {
       // Sign in using Better Auth client
-      const result = await authClient.signIn.email({
+      const result = await signIn.email({
         email,
         password,
-        redirectTo: '/dashboard' // Redirect to dashboard after login
+        callbackURL: '/dashboard' // Redirect to dashboard after login
       });
 
       if (result?.error) {
-        setError(result.error.message);
+        setError(result.error.message || 'Login failed');
       } else {
         // Redirect to dashboard after successful login
         router.push('/dashboard');
@@ -45,13 +45,13 @@ export default function SigninPage() {
         <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
           Sign In to Your Account
         </h2>
-        
+
         {error && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
             {error}
           </div>
         )}
-        
+
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -67,7 +67,7 @@ export default function SigninPage() {
               required
             />
           </div>
-          
+
           <div className="mb-4">
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
               Password
@@ -82,25 +82,25 @@ export default function SigninPage() {
               required
             />
           </div>
-          
+
           <button
             type="submit"
             disabled={loading}
             className={`w-full py-2 px-4 rounded-md text-white font-medium ${
-              loading 
-                ? 'bg-indigo-400 cursor-not-allowed' 
+              loading
+                ? 'bg-indigo-400 cursor-not-allowed'
                 : 'bg-indigo-600 hover:bg-indigo-700'
             }`}
           >
             {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
-        
+
         <div className="mt-4 text-center">
           <p className="text-gray-600">
             Don't have an account?{' '}
-            <a 
-              href="/signup" 
+            <a
+              href="/signup"
               className="text-indigo-600 hover:text-indigo-800 font-medium"
             >
               Sign Up
