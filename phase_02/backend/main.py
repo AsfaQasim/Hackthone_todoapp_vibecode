@@ -61,7 +61,7 @@ app.add_middleware(
 # Include the routers
 app.include_router(todos.router, prefix="/todos", tags=["todos"])
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(tasks.router)  # Tasks API with prefixed routes
+app.include_router(tasks.router, prefix="/tasks", tags=["tasks"])  # Tasks API with prefixed routes
 
 
 @app.get("/")

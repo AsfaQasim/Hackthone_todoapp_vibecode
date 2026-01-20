@@ -43,7 +43,8 @@ class JWTHandler:
             payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
 
             # Extract required fields - Better Auth standard prioritizes 'sub' claim for user_id
-            user_id: str = payload.get("sub") or payload.get("userId") or payload.get("user_id")
+            # Ensure 'sub' claim from Better Auth is correctly mapped to user_id
+            user_id: str = payload.get("sub")  # Better Auth uses 'sub' as the primary identifier
             email: str = payload.get("email") or payload.get("user_email") or payload.get("sub_email")
             exp_timestamp: int = payload.get("exp")
 
@@ -62,9 +63,9 @@ class JWTHandler:
                     detail="Token has expired"
                 )
 
-            # Return user info
+            # Return user info with standardized field names
             return {
-                "user_id": user_id,
+                "user_id": user_id,  # Map 'sub' from Better Auth to 'user_id' for internal use
                 "email": email,
                 "exp": exp_timestamp
             }

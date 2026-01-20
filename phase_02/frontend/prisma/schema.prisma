@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,5 +7,55 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Better Auth will handle the schema for us
-// We just need to define our additional models if needed
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  providerId         String
+  providerAccountId  String
+  accessToken        String?
+  refreshToken       String?
+  idToken            String?
+  expiresAt          Int?
+  scope              String?
+  tokenType          String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  userId      String
+  expiresAt   DateTime
+  ipaddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  username      String?
+  firstName     String?
+  lastName      String?
+  password      String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt()
+
+  accounts Account[]
+  sessions Session[]
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+}

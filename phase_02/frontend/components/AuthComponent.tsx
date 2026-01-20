@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn, signUp } from '../lib/auth-client';
+import { authClient } from '../lib/auth-client';
 
 interface AuthFormProps {
   onAuthSuccess: () => void;
@@ -23,7 +23,7 @@ export default function AuthComponent({ onAuthSuccess }: AuthFormProps) {
     try {
       if (isLogin) {
         // Login flow
-        const result = await signIn.email({
+        const result = await authClient.signIn.email({
           email,
           password,
           callbackURL: '/dashboard' // Redirect to dashboard after login
@@ -36,7 +36,7 @@ export default function AuthComponent({ onAuthSuccess }: AuthFormProps) {
         }
       } else {
         // Sign up flow
-        const result = await signUp.email({
+        const result = await authClient.signUp.email({
           email,
           password,
           name,

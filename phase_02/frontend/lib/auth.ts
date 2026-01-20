@@ -1,26 +1,16 @@
-import { betterAuth } from 'better-auth';
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import { PrismaClient } from "@prisma/client";
 
-const sql = neon(process.env.DATABASE_URL!);
-
-export const db = drizzle(sql);
-
-
+const prisma = new PrismaClient();
 
 export const auth = betterAuth({
-  database: {
-    provider: 'postgresql',
-    url: process.env.DATABASE_URL!,
-  },
-  secret: process.env.BETTER_AUTH_SECRET,
-  emailAndPassword: {
-    enabled: true,
-  },
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    database: prismaAdapter(prisma, {
+        provider: "postgresql", // Explicitly set for Neon
+    }),
+    emailAndPassword: {
+        enabled: true,
     },
-  },
+    // CORS/Trusted Origin settings for Next.js 16
+    trustedOrigins: ["http://localhost:3000"],
 });

@@ -1,42 +1,29 @@
-# Todo Application
+# Hackathon Todo Vibecode - Phase 02
+
+This project implements a Todo application with authentication using Next.js, Better Auth, FastAPI, and Neon DB.
+
+## Project Structure
+
+```
+phase_02/
+├── backend/          # FastAPI backend
+├── frontend/         # Next.js frontend (flattened structure)
+│   ├── app/          # App Router pages
+│   ├── components/   # React components
+│   ├── lib/          # Utilities and auth setup
+│   ├── prisma/       # Database schema
+│   └── public/       # Static assets
+├── .env.local       # Environment variables
+└── README.md
+```
 
 ## Setup Instructions
 
-### Prerequisites
-- Python 3.8+
-- Node.js 18+
-
-### Backend Setup
-1. Navigate to the backend directory:
-   ```bash
-   cd F:\hackthone_todo_vibecode\phase_02\backend
-   ```
-
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. Create a `.env` file in the backend directory with your database configuration:
-   ```
-   DATABASE_URL=postgresql://username:password@localhost:5432/todo_db
-   BETTER_AUTH_SECRET=your-secret-key-here
-   ```
-
-4. Start the backend server:
-   ```bash
-   python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
-   ```
-   
-   Or run the batch file:
-   ```bash
-   start_backend.bat
-   ```
-
 ### Frontend Setup
+
 1. Navigate to the frontend directory:
    ```bash
-   cd F:\hackthone_todo_vibecode\phase_02\frontend
+   cd frontend
    ```
 
 2. Install dependencies:
@@ -44,59 +31,68 @@
    npm install
    ```
 
-3. Create a `.env.local` file in the frontend directory:
+3. Create a `.env.local` file with your environment variables:
    ```
-   NEXT_PUBLIC_API_URL=http://localhost:8000
+   # App URLs
+   NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+   BETTER_AUTH_URL=http://localhost:3000
+
+   # Security (Must match Backend)
+   BETTER_AUTH_SECRET=your_secure_random_string_here
+
+   # Database (Neon DB - Ensure this is the Transaction Mode URL or Session Mode if using Prisma)
+   DATABASE_URL="postgres://user:password@ep-host.aws.neon.tech/neondb?sslmode=require"
    ```
 
-4. Start the frontend development server:
+4. Run the development server:
    ```bash
    npm run dev
    ```
 
-### Creating a Demo User
-If you need to create a demo user for testing, run the following script in the backend directory:
-```bash
-python create_demo_user_fixed.py
-```
+### Backend Setup
 
-This will create a user with:
-- Email: `demo@example.com`
-- Password: `demo123`
+1. Navigate to the backend directory:
+   ```bash
+   cd ../backend
+   ```
 
-### Authentication & User Isolation
-The application implements a secure, stateless authentication system:
+2. Set up your Python virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
-- JWT-based authentication using Better Auth on the frontend
-- Cryptographic verification of JWT tokens on the backend
-- User isolation at the API level - users can only access their own data
-- All protected endpoints require a valid JWT token
-- Requests without valid tokens return HTTP 401
-- Requests with mismatched user IDs return HTTP 403
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### API Endpoints
+4. Run the backend server:
+   ```bash
+   python main.py
+   # or
+   uvicorn main:app --reload
+   ```
 
-The application provides the following API endpoints:
+## Features
 
-- `GET /health` - Health check
-- `GET /profile` - Get authenticated user profile (requires JWT)
-- `GET /todos/` - Get all todos for the authenticated user (requires JWT)
-- `POST /todos/` - Create a new todo (requires JWT)
-- `GET /todos/{id}` - Get a specific todo (requires JWT)
-- `PUT /todos/{id}` - Update a specific todo (requires JWT)
-- `DELETE /todos/{id}` - Delete a specific todo (requires JWT)
-- `DELETE /todos/` - Delete all todos for the authenticated user (requires JWT)
+- ✅ Next.js 14+ with App Router
+- ✅ Better Auth integration
+- ✅ Neon DB (PostgreSQL) with Prisma ORM
+- ✅ Proper error handling for API calls
+- ✅ Environment configuration
+- ✅ Flattened project structure (no nested folders)
 
-### Features
-- Beautiful UI with gradient backgrounds and modern design
-- Authentication with login/logout functionality
-- Task management (create, read, update, delete tasks)
-- Secure user isolation - users can only access their own data
-- Responsive design for all screen sizes
-- Real-time task management
+## Troubleshooting
 
-### Troubleshooting
-- Make sure both backend and frontend servers are running
-- Check that the ports are correct (backend: 8000, frontend: 3000)
-- Verify that your database connection is working
-- Ensure environment variables are properly set, especially `BETTER_AUTH_SECRET`
+If you encounter issues with the `next` command not being recognized:
+- Use `npx next dev` instead of `npm run dev`
+- Make sure you're running the command from the `frontend` directory
+- Check that dependencies are properly installed
+
+## Notes
+
+- The frontend structure has been flattened from `frontend/my-app` to `frontend/`
+- Better Auth is configured with Prisma adapter for Neon DB
+- The project uses Next.js App Router (app directory)
+- Environment variables are properly configured for both frontend and backend

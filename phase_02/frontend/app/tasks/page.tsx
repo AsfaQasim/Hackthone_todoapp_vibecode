@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from '../../lib/auth-client';
-import { useAtomValue } from 'jotai';
 import { useRouter } from 'next/navigation';
 import { Task } from '@/types/task';
 import { apiCall } from '../../lib/api';
@@ -10,8 +9,7 @@ import CreateTaskForm from '../../components/task/CreateTaskForm';
 import TaskItem from '../../components/task/TaskItem';
 
 export default function TasksPage() {
-  const sessionData = useAtomValue(useSession);
-  const { data: session, isPending } = sessionData;
+  const { data: session, isPending } = useSession();
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);

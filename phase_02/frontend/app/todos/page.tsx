@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from '../../lib/auth-client';
-import { useAtomValue } from 'jotai';
 import { useRouter } from 'next/navigation';
 import { apiCall } from '../../lib/api';
 
@@ -17,8 +16,7 @@ interface Todo {
 }
 
 export default function TodosPage() {
-  const sessionData = useAtomValue(useSession);
-  const { data: session, isPending } = sessionData;
+  const { data: session, isPending } = useSession();
   const router = useRouter();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState({ title: '', description: '' });

@@ -79,11 +79,9 @@ def verify_user_owns_resource(request: Request, user_id_in_path: str = None, tod
         from models.task import Task
         db = next(get_db())
 
-        # Find the todo in the database
-        # Note: This assumes a SQLAlchemy model; adjust according to your actual DB implementation
+        # Find the todo in the database - strict database check only, no in-memory fallback
         try:
-            # This is pseudocode since we don't know the exact DB implementation
-            # You would need to query your actual database here
+            # Query the database to check if the todo exists and belongs to the authenticated user
             todo = db.query(Task).filter(Task.id == todo_id, Task.user_id == authenticated_user["user_id"]).first()
 
             if not todo:
@@ -91,19 +89,12 @@ def verify_user_owns_resource(request: Request, user_id_in_path: str = None, tod
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Access denied: You can only access your own resources"
                 )
-        except Exception:
-            # Fallback to in-memory check if DB query fails
-            # This is for the current in-memory implementation
-            from routes.todos import todos_db
-            todo_exists = any(
-                todo for todo in todos_db
-                if str(todo["id"]) == todo_id and todo["user_id"] == authenticated_user["user_id"]
+        except Exception as e:
+            # Log the error for debugging but don't expose internal details to the client
+            print(f"Database error in verify_user_owns_resource: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: Could not verify resource ownership"
             )
-
-            if not todo_exists:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied: You can only access your own resources"
-                )
 
     return authenticated_user

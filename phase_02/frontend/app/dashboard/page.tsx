@@ -1,14 +1,12 @@
 'use client';
 
 import { useSession } from '../../lib/auth-client';
-import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function DashboardPage() {
-  const sessionData = useAtomValue(useSession);
-  const { data: session, isPending } = sessionData;
+  const { data: session, isPending } = useSession();
   const router = useRouter();
 
   useEffect(() => {

@@ -1,13 +1,9 @@
-'use client';
+"use client";
 
-import { Provider } from 'better-auth/react';
-import { authClient } from '../lib/auth-client';
-import { ReactNode } from 'react';
+import { PropsWithChildren } from "react";
 
-export default function AuthProvider({ children }: { children: ReactNode }) {
-  return (
-    <Provider client={authClient}>
-      {children}
-    </Provider>
-  );
+// Better Auth doesn't require a top-level provider in many cases
+// The hooks manage the authentication context automatically
+export default function AuthProvider({ children }: PropsWithChildren) {
+  return <>{children}</>;
 }

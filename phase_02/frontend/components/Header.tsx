@@ -1,13 +1,11 @@
 "use client";
 
 import Link from 'next/link';
-import { useSession } from '../lib/auth-client';
-import { useAtomValue } from 'jotai';
+import { useSession } from '../lib/auth-client'; // Directly use the hook
 import LogoutButton from './LogoutButton';
 
 export default function Header() {
-    const sessionData = useAtomValue(useSession);
-    const { data: session, isPending } = sessionData;
+    const { data: session, isLoading } = useSession(); // Use the hook directly
 
   return (
     <header className="bg-white shadow-sm">
@@ -45,7 +43,7 @@ export default function Header() {
             </nav>
           </div>
           <div className="flex items-center">
-            {isPending ? (
+            {isLoading ? (
               <div>Loading...</div>
             ) : session ? (
               <div className="flex items-center">

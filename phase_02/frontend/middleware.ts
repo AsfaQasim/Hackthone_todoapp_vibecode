@@ -1,4 +1,3 @@
-import { authMiddleware } from 'better-auth/next-js';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -17,32 +16,24 @@ export function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith(route)
   );
 
-  // If it's a protected route, use Better Auth's middleware to check authentication
-  if (isProtectedRoute) {
-    const response = authMiddleware(request);
+  // Get the session cookie to check authentication status
+  // Using a generic approach to avoid direct dependency on Better Auth
+  const token = request.cookies.get('session_token') ||
+                request.cookies.get('better-auth.session_token') ||
+                request.cookies.get('authjs.session-token');
 
-    // If the response is a redirect to sign-in, redirect to home instead
-    if (response.redirect && response.url.includes('/sign-in')) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/';
-      return NextResponse.redirect(url);
-    }
-
-    // If user is authenticated, allow the request to continue
-    return response;
+  // If it's a protected route and user is not authenticated, redirect to signin
+  if (isProtectedRoute && !token) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/signin';
+    return NextResponse.redirect(url);
   }
 
   // If user is authenticated and trying to access auth routes, redirect to dashboard
-  if (isAuthRoute) {
-    const response = authMiddleware(request);
-
-    // Check if user is authenticated by looking at the response
-    // If user is authenticated, redirect to dashboard
-    if (response.headers.get('x-better-auth-user')) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/dashboard';
-      return NextResponse.redirect(url);
-    }
+  if (isAuthRoute && token) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/dashboard';
+    return NextResponse.redirect(url);
   }
 
   // For non-protected routes, continue normally

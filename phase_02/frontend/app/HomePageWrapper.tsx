@@ -1,13 +1,11 @@
 'use client';
 
 import { useSession } from '../lib/auth-client';
-import { useAtomValue } from 'jotai';
 import Link from 'next/link';
 import AuthComponent from '../components/AuthComponent';
 
 export default function HomePageWrapper() {
-  const sessionData = useAtomValue(useSession);
-  const { data: session, isPending } = sessionData;
+  const { data: session, isPending } = useSession(); // Call the hook as a function
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
@@ -29,7 +27,7 @@ export default function HomePageWrapper() {
             </div>
           ) : session ? (
             <div className="bg-white rounded-lg shadow-xl p-8 text-center">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Welcome back, {session.user.name || session.user.email}!</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Welcome back, {session.user?.name || session.user?.email}!</h2>
               <p className="text-gray-600 mb-6">Ready to manage your tasks?</p>
               <div className="space-y-4">
                 <Link
