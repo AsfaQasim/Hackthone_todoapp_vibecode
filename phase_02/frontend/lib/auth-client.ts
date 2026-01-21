@@ -9,6 +9,8 @@ export const authClient = createAuthClient({
   credentials: 'include',
 });
 
+console.log("Auth client initialized:", !!authClient, "Provider exists:", !!authClient?.Provider);
+
 // Export individual methods
 export const useSession = authClient.useSession;
 export const signIn = authClient.signIn;
@@ -16,4 +18,4 @@ export const signUp = authClient.signUp;
 export const signOut = authClient.signOut;
 
 // Export the authClient instance for use in API calls
-// The Provider is accessible via authClient.Provider
+export { authClient };

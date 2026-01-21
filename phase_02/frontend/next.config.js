@@ -1,34 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Configure Turbopack for Next.js 16
+  // Since webpack config is not compatible with Turbopack, we'll use Turbopack defaults
+  turbopack: {},
+  // Handle dynamic routes properly
   experimental: {
-    // Disable Turbopack initially to ensure stable SWC compilation
-    turbo: {
-      // Temporarily disable Turbopack until SWC issues are resolved
-      enabled: false,
-    },
-  },
-  // Configure webpack for better Windows compatibility
-  webpack: (config, { isServer }) => {
-    // Ensure compatibility with Windows file paths
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false, // Disable fs polyfills on client
-      };
-    }
-
-    // Handle WASM modules properly
-    config.experiments = {
-      ...config.experiments,
-      asyncWebAssembly: true,
-      layers: true,
-    };
-
-    return config;
-  },
-  // Increase the maximum content length to handle large bundles during development
-  httpAgentOptions: {
-    maxSockets: 50,
+    // Ensure proper handling of catch-all routes
+    serverComponentsExternalPackages: ["better-auth"],
   },
 };
 
