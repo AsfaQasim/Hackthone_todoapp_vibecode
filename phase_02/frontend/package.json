@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@next/swc-win32-x64-msvc": "^16.1.4",
-    "better-auth": "^1.1.0",
     "next": "^16.1.2",
     "pg": "^8.17.2",
     "react": "^19.2.3",

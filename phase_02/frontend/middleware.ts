@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Define protected routes
-const protectedRoutes = ['/dashboard', '/todos', '/profile', '/settings'];
-const authRoutes = ['/signin', '/signup'];
+const protectedRoutes = ['/dashboard', '/tasks', '/profile', '/settings'];
+const authRoutes = ['/login', '/signup'];
 
 export function middleware(request: NextRequest) {
   // Check if the route is protected
@@ -17,15 +17,13 @@ export function middleware(request: NextRequest) {
   );
 
   // Get the session cookie to check authentication status
-  // Using a generic approach to avoid direct dependency on Better Auth
-  const token = request.cookies.get('session_token') ||
-                request.cookies.get('better-auth.session_token') ||
-                request.cookies.get('authjs.session-token');
+  // Using a generic approach for our simple auth system
+  const token = request.cookies.get('auth_token');
 
-  // If it's a protected route and user is not authenticated, redirect to signin
+  // If it's a protected route and user is not authenticated, redirect to login
   if (isProtectedRoute && !token) {
     const url = request.nextUrl.clone();
-    url.pathname = '/signin';
+    url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 

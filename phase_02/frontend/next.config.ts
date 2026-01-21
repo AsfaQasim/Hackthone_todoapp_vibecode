@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
   // Handle dynamic routes properly
   experimental: {
     // Ensure proper handling of catch-all routes
-    serverComponentsExternalPackages: ["better-auth"],
+    serverComponentsExternalPackages: [],
   },
 };
 
