@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server';
-import { addUser, getUser } from '../../../lib/user-storage';
+import { createUser, findUserByEmail } from '../../../lib/db/models';
+import { initializeDatabase } from '../../../lib/db';
+import bcrypt from 'bcrypt';
+
+let dbInitialized = false;
 
 export async function POST(request: Request) {
   try {
+    // Initialize database if not already done
+    if (!dbInitialized) {
+      await initializeDatabase();
+      dbInitialized = true;
+    }
+
     const { email, password } = await request.json();
 
     // Basic validation
@@ -13,8 +23,11 @@ export async function POST(request: Request) {
       );
     }
 
+    // Normalize email to lowercase
+    const normalizedEmail = email.toLowerCase();
+
     // Check if user already exists
-    const existingUser = getUser(email);
+    const existingUser = await findUserByEmail(normalizedEmail);
     if (existingUser) {
       return NextResponse.json(
         { error: 'User already exists' },
@@ -22,18 +35,30 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create new user (in a real app, you'd hash the password)
-    addUser(email, password);
+    // Create new user with hashed password
+    const newUser = await createUser(normalizedEmail, password);
+
+    // Don't return the password in the response
+    const { password: _, ...userWithoutPassword } = newUser;
 
     return NextResponse.json(
       {
         message: 'User created successfully',
-        user: { email }
+        user: userWithoutPassword
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Signup error:', error);
+
+    // Handle unique constraint violation
+    if (error.message?.includes('already exists')) {
+      return NextResponse.json(
+        { error: 'User with this email already exists' },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

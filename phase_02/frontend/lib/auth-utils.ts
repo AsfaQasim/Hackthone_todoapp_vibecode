@@ -1,73 +1,45 @@
-// Example frontend login function using fetch
-export async function loginUser(email: string, password: string) {
+// Helper functions for authentication
+
+// Extract user ID from auth token
+// In a real app, you would decode the JWT token to get user info
+export function getUserIdFromCookie(): number | null {
   try {
-    const response = await fetch('/api/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      // In a real app, you'd store the token here
-      // localStorage.setItem('auth_token', data.token);
-      
-      // Set a cookie for the auth token (this would be done server-side in a real app)
-      document.cookie = `auth_token=${data.token || 'demo_token'}; path=/;`;
-      
-      return { success: true, user: data.user };
-    } else {
-      return { success: false, error: data.error };
+    // Get the auth token from cookies
+    const cookies = document.cookie.split('; ');
+    const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
+    
+    if (!authTokenRow) {
+      return null;
     }
+    
+    const token = authTokenRow.split('=')[1];
+    
+    // In a real app, you would decode the JWT token here
+    // For this demo, we'll return a placeholder
+    // Example: const decoded = jwt.decode(token);
+    // return decoded.userId;
+    
+    // For now, return a placeholder - in a real app you'd decode the JWT
+    return 1; // Placeholder user ID
   } catch (error) {
-    console.error('Login error:', error);
-    return { success: false, error: 'Network error occurred' };
+    console.error('Error extracting user ID from token:', error);
+    return null;
   }
 }
 
-// Example frontend signup function using fetch
-export async function signupUser(email: string, password: string) {
+// Alternative approach: Get user ID from context or session
+// This would be implemented differently depending on your auth system
+export async function getUserIdFromSession(): Promise<number | null> {
   try {
-    const response = await fetch('/api/signup', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      return { success: true, user: data.user };
-    } else {
-      return { success: false, error: data.error };
-    }
+    // In a real app, you might make an API call to get user info
+    // const response = await fetch('/api/me');
+    // const userData = await response.json();
+    // return userData.id;
+    
+    // For now, return a placeholder
+    return 1; // Placeholder user ID
   } catch (error) {
-    console.error('Signup error:', error);
-    return { success: false, error: 'Network error occurred' };
+    console.error('Error getting user ID from session:', error);
+    return null;
   }
-}
-
-// Example function to check if user is authenticated
-export function isAuthenticated() {
-  // In a real app, you'd validate the token
-  // For this demo, we'll just check if a token exists in localStorage or cookies
-  const token = document.cookie
-    .split('; ')
-    .find(row => row.startsWith('auth_token='))
-    ?.split('=')[1];
-  
-  return !!token;
-}
-
-// Example function to logout user
-export function logoutUser() {
-  // In a real app, you'd invalidate the token on the server
-  // For this demo, we'll just remove the token from localStorage and cookies
-  document.cookie = 'auth_token=; Max-Age=0; path=/;';
-  // localStorage.removeItem('auth_token');
 }

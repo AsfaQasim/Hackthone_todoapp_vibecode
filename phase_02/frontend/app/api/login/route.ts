@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server';
-import { getUser } from '../../../lib/user-storage';
+import { findUserByEmail } from '../../../lib/db/models';
+import { initializeDatabase } from '../../../lib/db';
+import bcrypt from 'bcrypt';
+
+let dbInitialized = false;
 
 export async function POST(request: Request) {
   try {
+    // Initialize database if not already done
+    if (!dbInitialized) {
+      await initializeDatabase();
+      dbInitialized = true;
+    }
+
     const { email, password } = await request.json();
 
     // Basic validation
@@ -13,22 +23,30 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if user exists and password matches
-    const user = getUser(email);
-    if (!user || user.password !== password) {
+    // Normalize email to lowercase
+    const normalizedEmail = email.toLowerCase();
+
+    // Find user by email
+    const user = await findUserByEmail(normalizedEmail);
+    if (!user) {
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
       );
     }
 
-    // In a real app, you'd generate a JWT token here
-    // For this demo, we'll just return a success message
+    // Compare password with hashed password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return NextResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json({
       message: 'Login successful',
-      user: { email: user.email },
-      // In a real app, you'd return a token here
-      // token: generateToken(user)
+      user: { id: user.id, email: user.email },
     });
   } catch (error) {
     console.error('Login error:', error);
