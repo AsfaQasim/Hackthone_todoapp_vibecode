@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
-import { initializeDatabase } from '../../../lib/db';
-import pool from '../../../lib/db/client';
-import { findUserByEmail } from '../../../lib/db/models';
+import { initializeTasksTable } from '../../../lib/db/tasks-model';
 import jwt from 'jsonwebtoken';
+import { createTask, getTasksByUserId } from '../../../lib/db/tasks-model';
 
 let dbInitialized = false;
 
-// Helper function to get user ID from auth token
+// Helper function to get user ID from auth token in cookies
 async function getUserIdFromRequest(request: Request): Promise<number | null> {
   try {
     // Get the authorization header
@@ -44,7 +43,7 @@ export async function GET(request: Request) {
   try {
     // Initialize database if not already done
     if (!dbInitialized) {
-      await initializeDatabase();
+      await initializeTasksTable();
       dbInitialized = true;
     }
 
@@ -58,12 +57,9 @@ export async function GET(request: Request) {
     }
 
     // Fetch tasks for the user
-    const result = await pool.query(
-      'SELECT * FROM tasks WHERE user_id = $1 ORDER BY created_at DESC',
-      [userId]
-    );
+    const tasks = await getTasksByUserId(userId);
 
-    return NextResponse.json(result.rows, { status: 200 });
+    return NextResponse.json(tasks, { status: 200 });
   } catch (error) {
     console.error('Error fetching tasks:', error);
     return NextResponse.json(
@@ -77,7 +73,7 @@ export async function POST(request: Request) {
   try {
     // Initialize database if not already done
     if (!dbInitialized) {
-      await initializeDatabase();
+      await initializeTasksTable();
       dbInitialized = true;
     }
 
@@ -100,13 +96,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Insert task into database
-    const result = await pool.query(
-      'INSERT INTO tasks (user_id, title, description, completed) VALUES ($1, $2, $3, $4) RETURNING *',
-      [userId, title.trim(), description || '', false]
-    );
+    // Create task in database
+    const newTask = await createTask(userId, title.trim(), description);
 
-    return NextResponse.json(result.rows[0], { status: 201 });
+    return NextResponse.json(newTask, { status: 201 });
   } catch (error) {
     console.error('Error creating task:', error);
     return NextResponse.json(

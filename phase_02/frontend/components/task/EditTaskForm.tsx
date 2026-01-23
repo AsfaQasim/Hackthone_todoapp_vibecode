@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Task } from '@/types/task';
-import { apiCall } from '../../lib/api';
 
 interface EditTaskFormProps {
   task: Task;
@@ -33,10 +32,20 @@ export default function EditTaskForm({ task, onSave, onCancel }: EditTaskFormPro
     }
 
     try {
-      const updatedTask = await apiCall<Task>(`/api/${task.user_id}/tasks/${task.id}`, {
+      // Get the auth token from cookies
+      const cookies = document.cookie.split('; ');
+      const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
+      const token = authTokenRow ? authTokenRow.split('=')[1] : null;
+
+      if (!token) {
+        throw new Error('User not authenticated');
+      }
+
+      const response = await fetch(`/api/tasks/${task.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           title: title.trim(),
@@ -44,10 +53,22 @@ export default function EditTaskForm({ task, onSave, onCancel }: EditTaskFormPro
         }),
       });
 
+      if (response.status === 401) {
+        // Token expired or invalid, redirect to login
+        window.location.href = '/login';
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update task');
+      }
+
+      const updatedTask = await response.json();
       onSave(updatedTask);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating task:', err);
-      setError('Failed to update task');
+      setError(err.message || 'Failed to update task');
     } finally {
       setLoading(false);
     }
@@ -56,13 +77,13 @@ export default function EditTaskForm({ task, onSave, onCancel }: EditTaskFormPro
   return (
     <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
       <h3 className="text-lg font-medium text-gray-800 mb-3">Edit Task</h3>
-      
+
       {error && (
         <div className="mb-3 p-2 bg-red-100 text-red-700 rounded">
           {error}
         </div>
       )}
-      
+
       <form onSubmit={handleSubmit}>
         <div className="mb-3">
           <label htmlFor="edit-title" className="block text-sm font-medium text-gray-700 mb-1">
@@ -77,7 +98,7 @@ export default function EditTaskForm({ task, onSave, onCancel }: EditTaskFormPro
             disabled={loading}
           />
         </div>
-        
+
         <div className="mb-3">
           <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-1">
             Description
@@ -91,7 +112,7 @@ export default function EditTaskForm({ task, onSave, onCancel }: EditTaskFormPro
             disabled={loading}
           />
         </div>
-        
+
         <div className="flex space-x-2">
           <button
             type="submit"
@@ -102,7 +123,7 @@ export default function EditTaskForm({ task, onSave, onCancel }: EditTaskFormPro
           >
             {loading ? 'Saving...' : 'Save Changes'}
           </button>
-          
+
           <button
             type="button"
             onClick={onCancel}

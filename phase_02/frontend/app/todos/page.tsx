@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from '../../lib/auth-client';
 import { useRouter } from 'next/navigation';
-import { apiCall } from '../../lib/api';
 
 interface Todo {
   id: string;
@@ -16,7 +14,6 @@ interface Todo {
 }
 
 export default function TodosPage() {
-  const { data: session, isPending } = useSession();
   const router = useRouter();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState({ title: '', description: '' });
@@ -24,17 +21,49 @@ export default function TodosPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isPending && !session) {
-      router.push('/'); // Redirect to home if not authenticated
-    } else if (session) {
+    // Check if user is authenticated by checking for auth token
+    const tokenExists = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('auth_token='));
+
+    if (!tokenExists) {
+      router.push('/login'); // Redirect to login if not authenticated
+    } else {
       fetchTodos();
     }
-  }, [session, isPending, router]);
+  }, [router]);
 
   const fetchTodos = async () => {
     try {
       setLoading(true);
-      const data = await apiCall<Todo[]>('/todos/');
+
+      // Get the auth token from cookies
+      const cookies = document.cookie.split('; ');
+      const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
+      const token = authTokenRow ? authTokenRow.split('=')[1] : null;
+
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      const response = await fetch('/api/tasks', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.status === 401) {
+        // Token expired or invalid, redirect to login
+        router.push('/login');
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch todos');
+      }
+
+      const data = await response.json();
       setTodos(data);
     } catch (err) {
       setError('Failed to fetch todos');
@@ -46,19 +75,43 @@ export default function TodosPage() {
 
   const handleAddTodo = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Get the auth token from cookies
+    const cookies = document.cookie.split('; ');
+    const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
+    const token = authTokenRow ? authTokenRow.split('=')[1] : null;
+
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
     try {
-      const response = await apiCall<Todo>('/todos/', {
+      const response = await fetch('/api/tasks', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(newTodo),
       });
 
-      setTodos([...todos, response]);
+      if (response.status === 401) {
+        // Token expired or invalid, redirect to login
+        router.push('/login');
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add todo');
+      }
+
+      const newTask = await response.json();
+      setTodos([...todos, newTask]);
       setNewTodo({ title: '', description: '' });
-    } catch (err) {
-      setError('Failed to add todo');
+    } catch (err: any) {
+      setError(err.message || 'Failed to add todo');
       console.error(err);
     }
   };
@@ -67,16 +120,38 @@ export default function TodosPage() {
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
 
+    // Get the auth token from cookies
+    const cookies = document.cookie.split('; ');
+    const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
+    const token = authTokenRow ? authTokenRow.split('=')[1] : null;
+
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
     try {
-      const response = await apiCall<Todo>(`/todos/${id}`, {
+      const response = await fetch(`/api/tasks/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ completed: !todo.completed }),
       });
 
-      setTodos(todos.map(t => t.id === id ? response : t));
+      if (response.status === 401) {
+        // Token expired or invalid, redirect to login
+        router.push('/login');
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to update todo');
+      }
+
+      const updatedTodo = await response.json();
+      setTodos(todos.map(t => t.id === id ? updatedTodo : t));
     } catch (err) {
       setError('Failed to update todo');
       console.error(err);
@@ -84,29 +159,40 @@ export default function TodosPage() {
   };
 
   const deleteTodo = async (id: string) => {
+    // Get the auth token from cookies
+    const cookies = document.cookie.split('; ');
+    const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
+    const token = authTokenRow ? authTokenRow.split('=')[1] : null;
+
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
     try {
-      await apiCall(`/todos/${id}`, {
+      const response = await fetch(`/api/tasks/${id}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
 
+      if (response.status === 401) {
+        // Token expired or invalid, redirect to login
+        router.push('/login');
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to delete todo');
+      }
+
       setTodos(todos.filter(t => t.id !== id));
-    } catch (err) {
-      setError('Failed to delete todo');
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete todo');
       console.error(err);
     }
   };
-
-  if (isPending) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-lg text-gray-600">Loading...</p>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return null; // Redirect happens in useEffect
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">

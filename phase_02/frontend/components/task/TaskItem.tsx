@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Task } from '@/types/task'; // Assuming we have a types directory
-import { apiCall } from '../../lib/api';
 import EditTaskForm from './EditTaskForm';
 
 interface TaskItemProps {
@@ -18,14 +17,37 @@ export default function TaskItem({ task, onUpdate, onDelete } : TaskItemProps) {
   const handleToggleCompletion = async () => {
     setLoading(true);
     try {
+      // Get the auth token from cookies
+      const cookies = document.cookie.split('; ');
+      const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
+      const token = authTokenRow ? authTokenRow.split('=')[1] : null;
+
+      if (!token) {
+        throw new Error('User not authenticated');
+      }
+
       // Update the task completion status via API
-      const updatedTask = await apiCall<Task>(`/api/${task.user_id}/tasks/${task.id}`, {
-        method: 'PATCH',
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
+        body: JSON.stringify({ completed: !task.completed }),
       });
 
+      if (response.status === 401) {
+        // Token expired or invalid, redirect to login
+        window.location.href = '/login';
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update task');
+      }
+
+      const updatedTask = await response.json();
       onUpdate(updatedTask);
     } catch (error) {
       console.error('Error toggling task completion:', error);
@@ -38,9 +60,33 @@ export default function TaskItem({ task, onUpdate, onDelete } : TaskItemProps) {
     if (window.confirm('Are you sure you want to delete this task?')) {
       setLoading(true);
       try {
-        await apiCall(`/api/${task.user_id}/tasks/${task.id}`, {
+        // Get the auth token from cookies
+        const cookies = document.cookie.split('; ');
+        const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
+        const token = authTokenRow ? authTokenRow.split('=')[1] : null;
+
+        if (!token) {
+          throw new Error('User not authenticated');
+        }
+
+        const response = await fetch(`/api/tasks/${task.id}`, {
           method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
         });
+
+        if (response.status === 401) {
+          // Token expired or invalid, redirect to login
+          window.location.href = '/login';
+          return;
+        }
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete task');
+        }
+
         onDelete(task.id);
       } catch (error) {
         console.error('Error deleting task:', error);

@@ -2,6 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import Sidebar from '../../components/Sidebar';
+import TaskForm from '../../components/TaskForm';
+import TaskItem from '../../components/TaskItem';
+import { Card, CardContent } from '../../components/ui/Card';
+import Button from '../../components/ui/Button';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import Skeleton from '../../components/ui/Skeleton';
+import PageTransition from '../../components/PageTransition';
 
 interface Task {
   id: number;
@@ -15,10 +24,11 @@ interface Task {
 export default function TasksPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskDescription, setNewTaskDescription] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
+  const [updatingTaskId, setUpdatingTaskId] = useState<number | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -38,7 +48,22 @@ export default function TasksPage() {
   const loadTasks = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/tasks');
+
+      // Get the auth token from cookies
+      const cookies = document.cookie.split('; ');
+      const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
+      const token = authTokenRow ? authTokenRow.split('=')[1] : null;
+
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      const response = await fetch('/api/tasks', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
 
       if (response.status === 401) {
         // Token expired or invalid, redirect to login
@@ -47,33 +72,50 @@ export default function TasksPage() {
       }
 
       if (!response.ok) {
-        throw new Error('Failed to load tasks');
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to load tasks');
       }
 
       const data = await response.json();
       setTasks(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading tasks:', error);
-      setError('Failed to load tasks');
+      setError(error.message || 'Failed to load tasks');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddTask = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddTask = async (title: string, description: string) => {
+    setIsAddingTask(true);
+    setError(null);
 
-    if (!newTaskTitle.trim()) return;
+    if (!title.trim()) {
+      setError('Task title is required');
+      setIsAddingTask(false);
+      return;
+    }
 
     try {
+      // Get the auth token from cookies
+      const cookies = document.cookie.split('; ');
+      const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
+      const token = authTokenRow ? authTokenRow.split('=')[1] : null;
+
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
       const response = await fetch('/api/tasks', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          title: newTaskTitle.trim(),
-          description: newTaskDescription,
+          title: title.trim(),
+          description: description,
         }),
       });
 
@@ -84,48 +126,54 @@ export default function TasksPage() {
       }
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add task');
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to add task');
       }
 
       const newTask = await response.json();
-      setTasks([newTask, ...tasks]); // Add new task to the top of the list
-
-      // Reset form
-      setNewTaskTitle('');
-      setNewTaskDescription('');
-    } catch (error) {
+      // Update the state immediately with the new task
+      setTasks(prevTasks => [newTask, ...prevTasks]); // Add new task to the top of the list
+    } catch (error: any) {
       console.error('Error adding task:', error);
-      setError('Failed to add task');
+      setError(error.message || 'Failed to add task');
+    } finally {
+      setIsAddingTask(false);
     }
   };
 
   const handleToggleComplete = async (taskId: number) => {
     try {
+      // Get the auth token from cookies
+      const cookies = document.cookie.split('; ');
+      const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
+      const token = authTokenRow ? authTokenRow.split('=')[1] : null;
+
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      // Find the current task
+      const currentTask = tasks.find(t => t.id === taskId);
+      if (!currentTask) return;
+
       // Optimistically update the UI
-      setTasks(tasks.map(task =>
+      setTasks(prevTasks => prevTasks.map(task =>
         task.id === taskId ? { ...task, completed: !task.completed } : task
       ));
 
-      // In a real app, you would make an API call to update the task status
-      // await fetch(`/api/tasks/${taskId}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ completed: !tasks.find(t => t.id === taskId)?.completed })
-      // });
-    } catch (error) {
-      console.error('Error toggling task completion:', error);
-      // Revert the optimistic update on error
-      setTasks(tasks.map(task =>
-        task.id === taskId ? { ...task, completed: !task.completed } : task
-      ));
-    }
-  };
+      setUpdatingTaskId(taskId);
 
-  const handleDeleteTask = async (taskId: number) => {
-    try {
+      // Make API call to update the task status
       const response = await fetch(`/api/tasks/${taskId}`, {
-        method: 'DELETE',
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          completed: !currentTask.completed
+        }),
       });
 
       if (response.status === 401) {
@@ -135,160 +183,183 @@ export default function TasksPage() {
       }
 
       if (!response.ok) {
-        throw new Error('Failed to delete task');
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to update task');
       }
 
-      setTasks(tasks.filter(task => task.id !== taskId));
-    } catch (error) {
-      console.error('Error deleting task:', error);
-      setError('Failed to delete task');
+      const updatedTask = await response.json();
+      // Update the task in the state with the response
+      setTasks(prevTasks => prevTasks.map(task =>
+        task.id === taskId ? updatedTask : task
+      ));
+    } catch (error: any) {
+      console.error('Error toggling task completion:', error);
+      // Revert the optimistic update on error
+      setTasks(prevTasks => prevTasks.map(task =>
+        task.id === taskId ? { ...task, completed: !task.completed } : task
+      ));
+      setError(error.message || 'Failed to update task');
+    } finally {
+      setUpdatingTaskId(null);
     }
   };
 
-  const handleLogout = () => {
-    // Remove the auth token from cookies
-    document.cookie = 'auth_token=; Max-Age=0; path=/;';
-    router.push('/login');
+  const handleDeleteTask = async (taskId: number) => {
+    // Validate the task ID before making the request
+    if (!taskId || isNaN(Number(taskId))) {
+      console.error('Invalid task ID provided:', taskId);
+      setError('Invalid task ID');
+      setDeletingTaskId(null);
+      return;
+    }
+
+    setDeletingTaskId(taskId);
+
+    try {
+      // Get the auth token from cookies
+      const cookies = document.cookie.split('; ');
+      const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
+      const token = authTokenRow ? authTokenRow.split('=')[1] : null;
+
+      if (!token) {
+        console.log('No auth token found in cookies');
+        router.push('/login');
+        return;
+      }
+
+      console.log('Sending delete request for task ID:', taskId);
+      console.log('Auth token:', token.substring(0, 10) + '...');
+
+      const response = await fetch(`/api/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      console.log('Delete response status:', response.status);
+
+      if (response.status === 401) {
+        // Token expired or invalid, redirect to login
+        router.push('/login');
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to delete task' }));
+        console.error('Delete request failed:', errorData);
+        throw new Error(errorData.error || 'Failed to delete task');
+      }
+
+      // For successful deletion, the API returns JSON with a message
+      // We can optionally process it, but the main thing is removing from UI
+      const result = await response.json();
+      console.log(result.message); // Log success message
+
+      // Remove the task from the UI
+      setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+    } catch (error: any) {
+      console.error('Error deleting task:', error);
+      setError(error.message || 'Failed to delete task');
+    } finally {
+      setDeletingTaskId(null);
+    }
   };
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-xl text-center">
-          <h2 className="text-2xl font-bold text-gray-800">Please log in</h2>
-          <p className="text-gray-600">You need to be logged in to access your tasks</p>
-          <button
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="max-w-md w-full space-y-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-200">Please log in</h2>
+          <p className="text-gray-400">You need to be logged in to access your tasks</p>
+          <Button
             onClick={() => router.push('/login')}
-            className="inline-block px-6 py-3 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
+            variant="primary"
           >
             Go to Login
-          </button>
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow-xl p-8">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800">My Tasks</h1>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-            >
-              Logout
-            </button>
+    <PageTransition>
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-10 text-center"
+        >
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+            My Tasks
+          </h1>
+          <p className="text-gray-400 mt-2">Manage your daily tasks and boost productivity</p>
+        </motion.div>
+
+        {/* Error Message */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 rounded-lg bg-red-500/20 p-4 border border-red-500/30"
+          >
+            <div className="text-sm text-red-300">{error}</div>
+          </motion.div>
+        )}
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <TaskForm onAddTask={handleAddTask} isLoading={isAddingTask} />
+        </motion.div>
+
+        {/* Tasks Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mt-10"
+        >
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold text-white">Your Tasks</h2>
+            <span className="text-gray-400">
+              {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+            </span>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-              {error}
+          {loading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, index) => (
+                <Skeleton key={index} className="h-20 w-full" />
+              ))}
+            </div>
+          ) : tasks.length === 0 ? (
+            <Card className="text-center py-12">
+              <CardContent>
+                <div className="text-gray-400 mb-4">No tasks yet</div>
+                <p className="text-gray-500">Add your first task to get started</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {tasks.map((task) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  onToggleComplete={handleToggleComplete}
+                  onDelete={handleDeleteTask}
+                  isUpdating={updatingTaskId === task.id}
+                  isDeleting={deletingTaskId === task.id}
+                />
+              ))}
             </div>
           )}
-
-          {/* Add Task Form */}
-          <div className="mb-10 p-6 bg-gray-50 rounded-lg">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Add New Task</h2>
-            <form onSubmit={handleAddTask} className="space-y-4">
-              <div>
-                <label htmlFor="taskTitle" className="block text-sm font-medium text-gray-700 mb-1">
-                  Task Title *
-                </label>
-                <input
-                  type="text"
-                  id="taskTitle"
-                  value={newTaskTitle}
-                  onChange={(e) => setNewTaskTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Enter task title"
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="taskDescription" className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (Optional)
-                </label>
-                <textarea
-                  id="taskDescription"
-                  value={newTaskDescription}
-                  onChange={(e) => setNewTaskDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Enter task description"
-                  rows={3}
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-              >
-                Add Task
-              </button>
-            </form>
-          </div>
-
-          {/* Tasks List */}
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Your Tasks</h2>
-
-            {loading ? (
-              <p className="text-gray-600">Loading tasks...</p>
-            ) : tasks.length === 0 ? (
-              <p className="text-gray-600 text-center py-4">No tasks yet. Add your first task!</p>
-            ) : (
-              <div className="space-y-4">
-                {tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className={`p-4 rounded-lg border ${
-                      task.completed
-                        ? 'bg-green-50 border-green-200'
-                        : 'bg-white border-gray-200'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-start">
-                        <input
-                          type="checkbox"
-                          checked={task.completed}
-                          onChange={() => handleToggleComplete(task.id)}
-                          className="mt-1 mr-3 h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500"
-                        />
-                        <div>
-                          <h3 className={`font-medium ${
-                            task.completed
-                              ? 'text-gray-500 line-through'
-                              : 'text-gray-800'
-                          }`}>
-                            {task.title}
-                          </h3>
-                          {task.description && (
-                            <p className="text-gray-600 mt-1">{task.description}</p>
-                          )}
-                          <p className="text-xs text-gray-500 mt-2">
-                            Created: {new Date(task.created_at).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => handleDeleteTask(task.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </PageTransition>
   );
 }

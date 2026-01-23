@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createUser, findUserByEmail } from '../../../lib/db/models';
 import { initializeDatabase } from '../../../lib/db';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 let dbInitialized = false;
 
@@ -38,13 +39,21 @@ export async function POST(request: Request) {
     // Create new user with hashed password
     const newUser = await createUser(normalizedEmail, password);
 
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: newUser.id, email: newUser.email },
+      process.env.JWT_SECRET || 'fallback_secret',
+      { expiresIn: '24h' }
+    );
+
     // Don't return the password in the response
     const { password: _, ...userWithoutPassword } = newUser;
 
     return NextResponse.json(
       {
         message: 'User created successfully',
-        user: userWithoutPassword
+        user: userWithoutPassword,
+        token // Include the token in the response
       },
       { status: 201 }
     );
