@@ -19,7 +19,7 @@ export default function Home() {
               transition={{ duration: 0.8 }}
               className="mb-10"
             >
-              <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-6">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-6">
                 VibeCode Task Manager
               </h1>
               <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-10">
@@ -37,10 +37,10 @@ export default function Home() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="px-8 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-medium rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center"
+                  className="px-6 py-3 sm:px-8 sm:py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-medium rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center text-sm sm:text-base"
                 >
                   Login to Dashboard
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                 </motion.button>
               </Link>
 
@@ -48,10 +48,10 @@ export default function Home() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="px-8 py-4 bg-gray-800 text-white font-medium rounded-xl border border-gray-700 hover:bg-gray-700 transition-colors flex items-center justify-center"
+                  className="px-6 py-3 sm:px-8 sm:py-4 bg-gray-800 text-white font-medium rounded-xl border border-gray-700 hover:bg-gray-700 transition-colors flex items-center justify-center text-sm sm:text-base"
                 >
                   Create Account
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                 </motion.button>
               </Link>
             </motion.div>
@@ -60,7 +60,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto"
+              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-5xl mx-auto"
             >
               <div className="bg-gray-900/50 backdrop-blur-lg border border-gray-800 rounded-xl p-6">
                 <div className="w-12 h-12 bg-cyan-900/30 rounded-lg flex items-center justify-center mb-4 mx-auto">

@@ -324,14 +324,14 @@ export default function TasksPage() {
 
   return (
     <PageTransition>
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-full sm:max-w-md md:max-w-lg lg:max-w-4xl mx-auto px-4 py-6 sm:py-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="mb-10 text-center"
         >
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
             My Tasks
           </h1>
           <p className="text-gray-400 mt-2">Manage your daily tasks and boost productivity</p>
@@ -363,9 +363,9 @@ export default function TasksPage() {
           transition={{ delay: 0.2 }}
           className="mt-10"
         >
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold text-white">Your Tasks</h2>
-            <span className="text-gray-400">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <h2 className="text-xl sm:text-2xl font-semibold text-white">Your Tasks</h2>
+            <span className="text-gray-400 text-sm sm:text-base">
               {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
             </span>
           </div>

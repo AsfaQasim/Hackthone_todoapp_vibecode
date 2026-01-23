@@ -53,7 +53,7 @@ const TaskForm = ({ onAddTask, isLoading = false }: TaskFormProps) => {
     >
       <Card>
         <CardContent className="p-0">
-          <form onSubmit={handleSubmit} className="space-y-4 p-6">
+          <form onSubmit={handleSubmit} className="space-y-4 p-4 sm:p-6">
             <h2 className="text-xl font-semibold text-white mb-4">Add New Task</h2>
             
             <Input
@@ -75,11 +75,11 @@ const TaskForm = ({ onAddTask, isLoading = false }: TaskFormProps) => {
             />
             
             <div className="pt-2">
-              <Button 
-                type="submit" 
-                variant="primary" 
+              <Button
+                type="submit"
+                variant="primary"
                 isLoading={isLoading}
-                className="w-full"
+                className="w-full py-3 sm:py-4 text-base sm:text-lg"
               >
                 {isLoading ? 'Adding task...' : 'Add Task'}
               </Button>
