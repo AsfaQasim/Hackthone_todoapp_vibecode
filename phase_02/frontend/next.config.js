@@ -1,13 +1,11 @@
 /** @type {import('next').NextConfig} */
+const path = require('path'); // ← ye line missing thi
+
 const nextConfig = {
-  // Configure Turbopack for Next.js 16
-  // Since webpack config is not compatible with Turbopack, we'll use Turbopack defaults
-  turbopack: {},
-  // Handle dynamic routes properly
-  experimental: {
-    // Ensure proper handling of catch-all routes
-    serverComponentsExternalPackages: [],
+  turbopack: {
+    root: path.resolve(__dirname), // absolute path required
   },
-};
+  serverExternalPackages: [], // remove experimental.serverComponentsExternalPackages
+}
 
 module.exports = nextConfig;
