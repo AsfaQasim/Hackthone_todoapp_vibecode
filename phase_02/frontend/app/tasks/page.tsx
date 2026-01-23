@@ -72,8 +72,18 @@ export default function TasksPage() {
       }
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to load tasks');
+        // Attempt to get error details from response
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          // If response is not JSON, get the text instead
+          const errorText = await response.text();
+          errorData = { error: errorText || `HTTP error! status: ${response.status}` };
+        }
+
+        console.error('Load tasks request failed:', errorData);
+        throw new Error(errorData.error || `Failed to load tasks: ${response.status}`);
       }
 
       const data = await response.json();
@@ -126,8 +136,18 @@ export default function TasksPage() {
       }
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to add task');
+        // Attempt to get error details from response
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          // If response is not JSON, get the text instead
+          const errorText = await response.text();
+          errorData = { error: errorText || `HTTP error! status: ${response.status}` };
+        }
+
+        console.error('Add task request failed:', errorData);
+        throw new Error(errorData.error || `Failed to add task: ${response.status}`);
       }
 
       const newTask = await response.json();
@@ -183,8 +203,18 @@ export default function TasksPage() {
       }
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to update task');
+        // Attempt to get error details from response
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          // If response is not JSON, get the text instead
+          const errorText = await response.text();
+          errorData = { error: errorText || `HTTP error! status: ${response.status}` };
+        }
+
+        console.error('Update task request failed:', errorData);
+        throw new Error(errorData.error || `Failed to update task: ${response.status}`);
       }
 
       const updatedTask = await response.json();
@@ -246,9 +276,18 @@ export default function TasksPage() {
       }
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to delete task' }));
+        // Attempt to get error details from response
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          // If response is not JSON, get the text instead
+          const errorText = await response.text();
+          errorData = { error: errorText || `HTTP error! status: ${response.status}` };
+        }
+
         console.error('Delete request failed:', errorData);
-        throw new Error(errorData.error || 'Failed to delete task');
+        throw new Error(errorData.error || `Failed to delete task: ${response.status}`);
       }
 
       // For successful deletion, the API returns JSON with a message
@@ -332,7 +371,7 @@ export default function TasksPage() {
           </div>
 
           {loading ? (
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
               {[...Array(3)].map((_, index) => (
                 <Skeleton key={index} className="h-20 w-full" />
               ))}
@@ -345,7 +384,7 @@ export default function TasksPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
               {tasks.map((task) => (
                 <TaskItem
                   key={task.id}

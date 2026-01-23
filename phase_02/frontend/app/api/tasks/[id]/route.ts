@@ -48,14 +48,17 @@ async function getUserIdFromRequest(request: Request): Promise<number | null> {
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log('PUT - Received params.id:', params.id, 'Type:', typeof params.id);
+    // Await the params promise to resolve
+    const resolvedParams = await params;
+
+    console.log('PUT - Received params.id:', resolvedParams?.id, 'Type:', typeof resolvedParams?.id);
 
     // Ensure params.id is a string before parsing
-    if (!params.id || typeof params.id !== 'string') {
-      console.log('PUT - Missing or invalid task ID parameter:', params.id);
+    if (!resolvedParams?.id || typeof resolvedParams?.id !== 'string') {
+      console.log('PUT - Missing or invalid task ID parameter:', resolvedParams?.id);
       return NextResponse.json(
         { error: 'Missing or invalid task ID' },
         { status: 400 }
@@ -63,11 +66,11 @@ export async function PUT(
     }
 
     // Remove any potential extra characters and parse
-    const cleanedId = params.id.toString().trim();
+    const cleanedId = resolvedParams.id.toString().trim();
     const taskId = parseInt(cleanedId);
 
     if (isNaN(taskId)) {
-      console.log('PUT - Invalid task ID after parsing:', params.id, 'Cleaned:', cleanedId);
+      console.log('PUT - Invalid task ID after parsing:', resolvedParams.id, 'Cleaned:', cleanedId);
       return NextResponse.json(
         { error: 'Invalid task ID' },
         { status: 400 }
@@ -117,14 +120,17 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log('Received params.id:', params.id, 'Type:', typeof params.id);
+    // Await the params promise to resolve
+    const resolvedParams = await params;
+
+    console.log('Received params.id:', resolvedParams?.id, 'Type:', typeof resolvedParams?.id);
 
     // Ensure params.id is a string before parsing
-    if (!params.id || typeof params.id !== 'string') {
-      console.log('Missing or invalid task ID parameter:', params.id);
+    if (!resolvedParams?.id || typeof resolvedParams?.id !== 'string') {
+      console.log('Missing or invalid task ID parameter:', resolvedParams?.id);
       return NextResponse.json(
         { error: 'Missing or invalid task ID' },
         { status: 400 }
@@ -132,11 +138,11 @@ export async function DELETE(
     }
 
     // Remove any potential extra characters and parse
-    const cleanedId = params.id.toString().trim();
+    const cleanedId = resolvedParams.id.toString().trim();
     const taskId = parseInt(cleanedId);
 
     if (isNaN(taskId)) {
-      console.log('Invalid task ID after parsing:', params.id, 'Cleaned:', cleanedId);
+      console.log('Invalid task ID after parsing:', resolvedParams.id, 'Cleaned:', cleanedId);
       return NextResponse.json(
         { error: 'Invalid task ID' },
         { status: 400 }

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from './ui/Card';
 import Input from './ui/Input';
+import Textarea from './ui/Textarea';
 import Button from './ui/Button';
 
 interface TaskFormProps {
@@ -64,13 +65,12 @@ const TaskForm = ({ onAddTask, isLoading = false }: TaskFormProps) => {
               required
             />
             
-            <Input
+            <Textarea
               label="Description (Optional)"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add details..."
               error={errors.description}
-              as="textarea"
               rows={3}
             />
             

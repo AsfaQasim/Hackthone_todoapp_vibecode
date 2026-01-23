@@ -1,5 +1,6 @@
-// Custom auth client that works with our JWT-based system
-// This replaces the Better Auth client to avoid conflicts
+'use client'
+
+import React from 'react';
 
 // Mock session object for compatibility
 const mockSession = {
@@ -12,9 +13,14 @@ const mockSession = {
 // Function to get session (check for our auth token)
 export function useSession() {
   if (typeof window !== 'undefined') {
-    const tokenExists = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('auth_token='));
+    const cookies = document.cookie.split('; ');
+    let tokenExists = false;
+    for (let i = 0; i < cookies.length; i++) {
+      if (cookies[i].startsWith('auth_token=')) {
+        tokenExists = true;
+        break;
+      }
+    }
 
     if (tokenExists) {
       // In a real app, we would decode the JWT to get user info
@@ -50,7 +56,14 @@ export async function signIn(credentials: { email: string; password: string }, o
       const expirationDate = new Date();
       expirationDate.setDate(expirationDate.getDate() + 1); // 1 day from now
 
-      document.cookie = `auth_token=${data.token}; path=/; expires=${expirationDate.toUTCString()}; SameSite=Lax`;
+      // Create cookie string without using template literals or regex-sensitive characters
+      const cookieParts = [
+        'auth_token=' + data.token,
+        'path=/',
+        'expires=' + expirationDate.toUTCString(),
+        'SameSite=Lax'
+      ];
+      document.cookie = cookieParts.join('; ');
 
       // Redirect if callbackURL is provided
       if (options?.callbackURL) {
@@ -67,7 +80,7 @@ export async function signIn(credentials: { email: string; password: string }, o
 }
 
 // Sign up function
-export async function signUp(credentials: { email: string; password: string }) {
+export async function signUp(credentials: { email: string; password: string; name?: string }) {
   try {
     const response = await fetch('/api/signup', {
       method: 'POST',
@@ -85,7 +98,14 @@ export async function signUp(credentials: { email: string; password: string }) {
         const expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() + 1); // 1 day from now
 
-        document.cookie = `auth_token=${data.token}; path=/; expires=${expirationDate.toUTCString()}; SameSite=Lax`;
+        // Create cookie string without using template literals or regex-sensitive characters
+        const cookieParts = [
+          'auth_token=' + data.token,
+          'path=/',
+          'expires=' + expirationDate.toUTCString(),
+          'SameSite=Lax'
+        ];
+        document.cookie = cookieParts.join('; ');
       }
 
       return { error: null, data };
@@ -114,9 +134,11 @@ export async function signOut(options?: { callbackURL?: string }) {
 export function getJwt() {
   if (typeof window !== 'undefined') {
     const cookies = document.cookie.split('; ');
-    const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
-    if (authTokenRow) {
-      return authTokenRow.split('=')[1];
+    for (let i = 0; i < cookies.length; i++) {
+      if (cookies[i].startsWith('auth_token=')) {
+        const parts = cookies[i].split('=');
+        return parts[1];
+      }
     }
   }
   return null;
@@ -124,8 +146,12 @@ export function getJwt() {
 
 // Export a mock client object for compatibility
 export const authClient = {
-  signIn: { email: signIn },
-  signUp: { email: signUp },
+  signIn: {
+    email: (credentials: { email: string; password: string }, options?: { callbackURL?: string }) => signIn(credentials, options)
+  },
+  signUp: {
+    email: (credentials: { email: string; password: string; name?: string }) => signUp(credentials)
+  },
   signOut,
   useSession,
   getJwt,

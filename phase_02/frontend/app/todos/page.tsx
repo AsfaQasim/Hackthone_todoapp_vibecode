@@ -103,8 +103,18 @@ export default function TodosPage() {
       }
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add todo');
+        // Attempt to get error details from response
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          // If response is not JSON, get the text instead
+          const errorText = await response.text();
+          errorData = { error: errorText || `HTTP error! status: ${response.status}` };
+        }
+
+        console.error('Add request failed:', errorData);
+        throw new Error(errorData.error || `Failed to add todo: ${response.status}`);
       }
 
       const newTask = await response.json();
@@ -147,7 +157,18 @@ export default function TodosPage() {
       }
 
       if (!response.ok) {
-        throw new Error('Failed to update todo');
+        // Attempt to get error details from response
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          // If response is not JSON, get the text instead
+          const errorText = await response.text();
+          errorData = { error: errorText || `HTTP error! status: ${response.status}` };
+        }
+
+        console.error('Update request failed:', errorData);
+        throw new Error(errorData.error || `Failed to update todo: ${response.status}`);
       }
 
       const updatedTodo = await response.json();
@@ -184,7 +205,18 @@ export default function TodosPage() {
       }
 
       if (!response.ok) {
-        throw new Error('Failed to delete todo');
+        // Attempt to get error details from response
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          // If response is not JSON, get the text instead
+          const errorText = await response.text();
+          errorData = { error: errorText || `HTTP error! status: ${response.status}` };
+        }
+
+        console.error('Delete request failed:', errorData);
+        throw new Error(errorData.error || `Failed to delete todo: ${response.status}`);
       }
 
       setTodos(todos.filter(t => t.id !== id));

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { authClient } from '../lib/auth-client';
+import { authClient, signIn } from '../lib/auth-client';
 
 interface AuthFormProps {
   onAuthSuccess: () => void;
@@ -23,11 +23,11 @@ export default function AuthComponent({ onAuthSuccess }: AuthFormProps) {
     try {
       if (isLogin) {
         // Login flow
-        const result = await authClient.signIn.email({
+        const result = await signIn({
           email,
           password,
-          callbackURL: '/dashboard' // Redirect to dashboard after login
         });
+
 
         if (result?.error) {
           setError(result.error.message || 'Login failed');
@@ -38,8 +38,7 @@ export default function AuthComponent({ onAuthSuccess }: AuthFormProps) {
         // Sign up flow
         const result = await authClient.signUp.email({
           email,
-          password,
-          name,
+          password
         });
 
         if (result?.error) {
@@ -121,11 +120,10 @@ export default function AuthComponent({ onAuthSuccess }: AuthFormProps) {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-2 px-4 rounded-md text-white font-medium ${
-              loading
+            className={`w-full py-2 px-4 rounded-md text-white font-medium ${loading
                 ? 'bg-indigo-400 cursor-not-allowed'
                 : 'bg-indigo-600 hover:bg-indigo-700'
-            }`}
+              }`}
           >
             {loading ? 'Processing...' : isLogin ? 'Sign In' : 'Sign Up'}
           </button>
