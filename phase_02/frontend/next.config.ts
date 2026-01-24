@@ -2,13 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  // Configure Turbopack for Next.js 16
-  // Since webpack config is not compatible with Turbopack, we'll use Turbopack defaults
-  // and remove the webpack-specific configuration
-   turbopack: {
-    root: './',
-  },
-  // Handle dynamic routes properly
+  // Disable Turbopack due to stability issues
   experimental: {
     // Ensure proper handling of catch-all routes
     serverComponentsExternalPackages: [],
