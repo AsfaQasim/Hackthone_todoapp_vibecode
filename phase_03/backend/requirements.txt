@@ -9,7 +9,6 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 alembic==1.13.1
-better-auth==0.0.1  # Placeholder - will need to use actual Better Auth package
 python-dotenv==1.0.0
 pytest==7.4.3
 pytest-asyncio==0.21.1

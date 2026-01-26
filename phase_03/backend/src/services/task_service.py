@@ -3,8 +3,8 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
-from ..models.task import Task
-from ..models.user import User
+from src.models.task import Task
+from src.models.user import User
 
 
 class TaskService:

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from ..models.base_models import User
+from src.models.base_models import User
 
 
 class MCPToolResult(BaseModel):

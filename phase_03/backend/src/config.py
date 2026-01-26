@@ -8,7 +8,20 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
     # Database settings
-    database_url: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:password@localhost/dbname")
+    @property
+    def database_url(self) -> str:
+        env_database_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:password@localhost/dbname")
+        if not os.getenv("ENVIRONMENT") or os.getenv("ENVIRONMENT") == "development":
+            # Check if it's the default PostgreSQL URL or the production Neon URL
+            if "neon.tech" in env_database_url or "postgresql" in env_database_url:
+                # Use absolute path to ensure consistency regardless of working directory
+                import pathlib
+                db_path = pathlib.Path(__file__).parent.parent.parent / "todo_app_local.db"
+                return f"sqlite:///{db_path.as_posix()}"
+            else:
+                return env_database_url
+        else:
+            return env_database_url
     
     # JWT settings
     secret_key: str = os.getenv("BETTER_AUTH_SECRET", "your-secret-key-change-in-production")
@@ -30,6 +43,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "allow"
 
 # Create a single instance of settings
 settings = Settings()

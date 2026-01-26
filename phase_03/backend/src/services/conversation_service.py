@@ -3,9 +3,9 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
-from ..models.conversation import Conversation
-from ..models.message import Message
-from ..models.user import User
+from src.models.conversation import Conversation
+from src.models.message import Message
+from src.models.user import User
 
 
 class ConversationService:

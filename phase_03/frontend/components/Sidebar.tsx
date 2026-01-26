@@ -12,8 +12,8 @@ const Sidebar = () => {
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
-{ href: '/tasks', label: 'Tasks', icon: Calendar },
-
+    { href: '/tasks', label: 'Tasks', icon: Calendar },
+    { href: '/chat', label: 'AI Assistant', icon: User },
   ];
 
   const handleLogout = () => {

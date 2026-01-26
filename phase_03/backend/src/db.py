@@ -5,15 +5,18 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 # Get database URL from environment variable
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:password@localhost/dbname")
 
+# Handle environment-specific configurations here
+if not os.getenv("ENVIRONMENT") or os.getenv("ENVIRONMENT") == "development":
+    # Check if it's the default PostgreSQL URL or the production Neon URL
+    if "neon.tech" in DATABASE_URL or "postgresql" in DATABASE_URL:
+        DATABASE_URL = "sqlite:///./todo_app_local.db"
+
 # For synchronous operations (needed for Alembic migrations)
-SYNC_DATABASE_URL = DATABASE_URL.replace("+asyncpg", "")
+SYNC_DATABASE_URL = DATABASE_URL.replace("+asyncpg", "") if "+asyncpg" in DATABASE_URL else DATABASE_URL
 
 engine = create_engine(
     SYNC_DATABASE_URL,

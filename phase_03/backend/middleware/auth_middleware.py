@@ -9,28 +9,36 @@ class JWTBearer(HTTPBearer):
     """
     Custom JWT Bearer middleware that validates the Authorization header
     and attaches the authenticated user context to the request.
+
+    Note: When used with the global auth middleware, this will use the
+    pre-authenticated user from request.state instead of validating the token again.
     """
-    
+
     def __init__(self, auto_error: bool = True):
         super(JWTBearer, self).__init__(auto_error=auto_error)
-    
+
     async def __call__(self, request: Request) -> Dict[str, Any]:
-        # Extract credentials from the Authorization header
+        # Check if the global middleware has already authenticated the user
+        if hasattr(request.state, 'user') and request.state.user is not None:
+            # Use the pre-authenticated user from global middleware
+            return request.state.user
+
+        # If no pre-authenticated user, fall back to manual token validation
         credentials: HTTPAuthorizationCredentials = await super(JWTBearer, self).__call__(request)
-        
+
         if credentials:
             if not credentials.scheme == "Bearer":
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid authentication scheme."
                 )
-            
+
             # Verify the token and get user info
             user_info = get_current_user(credentials.credentials)
-            
+
             # Attach user info to the request object for later use
             request.state.user = user_info
-            
+
             return user_info
         else:
             raise HTTPException(
@@ -43,14 +51,24 @@ def verify_user_is_authenticated(request: Request) -> Dict[str, Any]:
     """
     Dependency to verify that a user is authenticated.
     This can be used to protect API endpoints.
+    Works with both global middleware and standalone authentication.
     """
-    if not hasattr(request.state, 'user') or request.state.user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required"
-        )
+    # Check if global middleware has already authenticated the user
+    if hasattr(request.state, 'user') and request.state.user is not None:
+        return request.state.user
 
-    return request.state.user
+    # Also check if the current_user was set by the global middleware
+    if hasattr(request.state, 'current_user') and request.state.current_user is not None:
+        # Convert current_user to the expected format
+        return {
+            "user_id": request.state.current_user.user_id,
+            "email": request.state.current_user.email
+        }
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Authentication required"
+    )
 
 
 def verify_user_owns_resource(request: Request, user_id_in_path: str = None, todo_id: str = None) -> Dict[str, Any]:
@@ -75,14 +93,14 @@ def verify_user_owns_resource(request: Request, user_id_in_path: str = None, tod
 
     # If a todo_id is provided, verify that the authenticated user owns that specific todo
     if todo_id:
-        from database.engine import get_db
-        from models.task import Task
-        db = next(get_db())
+        from src.db import SessionLocal
+        from src.models.base_models import Task as DBTask
+        db = SessionLocal()
 
-        # Find the todo in the database - strict database check only, no in-memory fallback
         try:
+            # Find the todo in the database - strict database check only, no in-memory fallback
             # Query the database to check if the todo exists and belongs to the authenticated user
-            todo = db.query(Task).filter(Task.id == todo_id, Task.user_id == authenticated_user["user_id"]).first()
+            todo = db.query(DBTask).filter(DBTask.id == todo_id, DBTask.user_id == authenticated_user["user_id"]).first()
 
             if not todo:
                 raise HTTPException(
@@ -96,5 +114,7 @@ def verify_user_owns_resource(request: Request, user_id_in_path: str = None, tod
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied: Could not verify resource ownership"
             )
+        finally:
+            db.close()
 
     return authenticated_user

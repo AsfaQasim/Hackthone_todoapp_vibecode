@@ -3,9 +3,9 @@
 import json
 from typing import Dict, Any, List, Optional
 from openai import OpenAI
-from ..config import settings
-from ..services.mcp_tool_service import mcp_tool_service, MCPToolResult
-from ..models.user import User
+from src.config import settings
+from src.services.mcp_tool_service import mcp_tool_service, MCPToolResult
+from src.models.user import User
 from sqlalchemy.orm import Session
 
 

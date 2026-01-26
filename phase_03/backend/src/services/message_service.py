@@ -3,8 +3,8 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
-from ..models.base_models import Message, Conversation
-from ..services.mcp_tool_service import MCPToolResult
+from src.models.base_models import Message, Conversation
+from src.services.mcp_tool_service import MCPToolResult
 
 
 def store_user_message(
