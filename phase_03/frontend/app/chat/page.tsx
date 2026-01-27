@@ -25,7 +25,7 @@ export default function ChatPage() {
         console.log("Backend is reachable with the token");
       } else {
         console.error("Token not valid for backend");
-        router.push('/login');
+        setIsLoggedIn(false);
       }
     } catch (error) {
       console.error("Error verifying token with backend:", error);
@@ -39,7 +39,7 @@ export default function ChatPage() {
       .find(row => row.startsWith('auth_token='));
 
     if (!tokenExists) {
-      router.push('/login');
+      setIsLoggedIn(false);
     } else {
       setIsLoggedIn(true);
 
@@ -60,15 +60,31 @@ export default function ChatPage() {
             if (tokenParts.length === 3) {
               try {
                 // Add padding to base64 string if needed
-                const base64Payload = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
+                let base64Payload = tokenParts[1];
+                // Add required padding
+                while (base64Payload.length % 4) {
+                  base64Payload += '=';
+                }
                 const payload = JSON.parse(atob(base64Payload));
-                setUserId(payload.sub || payload.userId || payload.id); // Try different possible fields
+                console.log('Token payload:', payload); // Debug log
+                // Try different possible fields for user ID
+                const userIdFromToken = payload.sub || payload.userId || payload.user_id || payload.id;
+                if (userIdFromToken) {
+                  setUserId(userIdFromToken);
+                  console.log('Set userId to:', userIdFromToken); // Debug log
+                } else {
+                  console.error('No user ID found in token payload:', payload);
+                }
               } catch (e) {
                 console.error('Error decoding token:', e);
                 // If we can't decode the token, try to make a request to get user info
                 fetchUserInfo(token);
               }
+            } else {
+              console.error('Invalid token format');
             }
+          } else {
+            console.error('No auth token found in cookies');
           }
         }
       } catch (e) {
@@ -81,8 +97,8 @@ export default function ChatPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="max-w-md w-full space-y-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-200">Please log in</h2>
-          <p className="text-gray-400">You need to be logged in to access the chat</p>
+          <h2 className="text-2xl font-bold text-gray-200">Session Expired</h2>
+          <p className="text-gray-400">Your session has expired. Please refresh the page or log in again.</p>
           <button
             onClick={() => router.push('/login')}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -98,8 +114,19 @@ export default function ChatPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="max-w-md w-full space-y-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-200">Loading...</h2>
-          <p className="text-gray-400">Retrieving user information</p>
+          <h2 className="text-2xl font-bold text-gray-200">Authentication Issue</h2>
+          <p className="text-gray-400">Unable to retrieve user information. Please log in again.</p>
+          <button
+            onClick={() => {
+              // Clear any stored auth info and redirect to login
+              document.cookie = 'auth_token=; Max-Age=0; path=/';
+              localStorage.removeItem('user_info');
+              router.push('/login');
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Go to Login
+          </button>
         </div>
       </div>
     );

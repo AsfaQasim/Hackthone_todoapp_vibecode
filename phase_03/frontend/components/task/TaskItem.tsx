@@ -37,8 +37,8 @@ export default function TaskItem({ task, onUpdate, onDelete } : TaskItemProps) {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        window.location.href = '/login';
+        // Token expired or invalid, show error message
+        alert('Your session has expired. Please refresh the page or log in again.');
         return;
       }
 
@@ -77,8 +77,8 @@ export default function TaskItem({ task, onUpdate, onDelete } : TaskItemProps) {
         });
 
         if (response.status === 401) {
-          // Token expired or invalid, redirect to login
-          window.location.href = '/login';
+          // Token expired or invalid, show error message
+          alert('Your session has expired. Please refresh the page or log in again.');
           return;
         }
 

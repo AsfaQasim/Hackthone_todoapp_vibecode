@@ -48,10 +48,11 @@ export default function DashboardPage() {
         console.log("Backend is reachable with the token");
       } else {
         console.error("Token not valid for backend");
-        router.push('/login');
+        setError('Token not valid for backend. Please log in again.');
       }
     } catch (error) {
       console.error("Error verifying token with backend:", error);
+      setError('Session verification failed. Please log in again.');
     }
   };
 
@@ -62,7 +63,7 @@ export default function DashboardPage() {
       .find(row => row.startsWith('auth_token='));
 
     if (!tokenExists) {
-      router.push('/login');
+      setError('User not authenticated. Please log in again.');
     } else {
       setIsLoggedIn(true);
 
@@ -112,7 +113,7 @@ export default function DashboardPage() {
       const token = authTokenRow ? authTokenRow.split('=')[1] : null;
 
       if (!token) {
-        router.push('/login');
+        setError('User not authenticated. Please log in again.');
         return;
       }
 
@@ -123,8 +124,8 @@ export default function DashboardPage() {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        router.push('/login');
+        // Token expired or invalid, show error message
+        setError('Your session has expired. Please refresh the page or log in again.');
         return;
       }
 
@@ -170,7 +171,7 @@ export default function DashboardPage() {
       const token = authTokenRow ? authTokenRow.split('=')[1] : null;
 
       if (!token) {
-        router.push('/login');
+        setError('User not authenticated. Please log in again.');
         return;
       }
 
@@ -187,8 +188,8 @@ export default function DashboardPage() {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        router.push('/login');
+        // Token expired or invalid, show error message
+        setError('Your session has expired. Please refresh the page or log in again.');
         return;
       }
 
@@ -226,7 +227,7 @@ export default function DashboardPage() {
       const token = authTokenRow ? authTokenRow.split('=')[1] : null;
 
       if (!token) {
-        router.push('/login');
+        setError('User not authenticated. Please log in again.');
         return;
       }
 
@@ -254,8 +255,8 @@ export default function DashboardPage() {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        router.push('/login');
+        // Token expired or invalid, show error message
+        setError('Your session has expired. Please refresh the page or log in again.');
         return;
       }
 
@@ -310,7 +311,7 @@ export default function DashboardPage() {
 
       if (!token) {
         console.log('No auth token found in cookies');
-        router.push('/login');
+        setError('User not authenticated. Please log in again.');
         return;
       }
 
@@ -327,8 +328,8 @@ export default function DashboardPage() {
       console.log('Delete response status:', response.status);
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        router.push('/login');
+        // Token expired or invalid, show error message
+        setError('Your session has expired. Please refresh the page or log in again.');
         return;
       }
 

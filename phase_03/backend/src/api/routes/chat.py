@@ -56,22 +56,34 @@ async def get_authenticated_user(request: Request, db: Session = Depends(get_db)
                 # Try converting to UUID object and back to string to normalize
                 user_uuid = uuid.UUID(str(user_info["user_id"]))
 
-                # Try with different representations
-                user = db.query(User).filter(User.id == str(user_uuid)).first()
+                # Try with hex representation (32-char without dashes) - this is how it's stored in DB
+                user = db.query(User).filter(User.id == user_uuid.hex).first()
 
-                # If still not found, try the hex representation
-                if not user:
-                    user = db.query(User).filter(User.id == user_uuid.hex).first()
-
-                # If still not found, try with canonical format
+                # If still not found, try with canonical format (with dashes)
                 if not user:
                     user = db.query(User).filter(User.id == str(user_uuid)).first()
-            except Exception:
+
+            except Exception as e:
+                logger.error(f"Error converting UUID: {e}")
                 pass  # Ignore UUID conversion errors
 
         if not user:
             # The user ID exists in the token but not in the database
             # This could happen if the user was deleted after token issuance
+            logger.error(f"User not found in database: {user_info['user_id']}")
+            # Try to handle the case where the user_id might be in a different format
+            # Check if it's a UUID string that needs to be converted
+            try:
+                user_uuid = uuid.UUID(str(user_info["user_id"]))
+                # Try to find with both hex and canonical formats
+                user = db.query(User).filter(User.id == user_uuid.hex).first()
+                if not user:
+                    user = db.query(User).filter(User.id == str(user_uuid)).first()
+            except Exception:
+                pass  # If UUID conversion fails, continue to raise error
+
+        if not user:
+            # The user ID exists in the token but not in the database
             logger.error(f"User not found in database: {user_info['user_id']}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -92,18 +104,30 @@ async def get_authenticated_user(request: Request, db: Session = Depends(get_db)
                 # Try converting to UUID object and back to string to normalize
                 user_uuid = uuid.UUID(str(request.state.current_user.user_id))
 
-                # Try with different representations
-                user = db.query(User).filter(User.id == str(user_uuid)).first()
+                # Try with hex representation (32-char without dashes) - this is how it's stored in DB
+                user = db.query(User).filter(User.id == user_uuid.hex).first()
 
-                # If still not found, try the hex representation
+                # If still not found, try with canonical format (with dashes)
                 if not user:
-                    user = db.query(User).filter(User.id == user_uuid.hex).first()
+                    user = db.query(User).filter(User.id == str(user_uuid)).first()
 
-                # If still not found, try with canonical format
+            except Exception as e:
+                logger.error(f"Error converting UUID: {e}")
+                pass  # Ignore UUID conversion errors
+
+        if not user:
+            # The user ID exists in the token but not in the database
+            logger.error(f"User not found in database: {request.state.current_user.user_id}")
+            # Try to handle the case where the user_id might be in a different format
+            # Check if it's a UUID string that needs to be converted
+            try:
+                user_uuid = uuid.UUID(str(request.state.current_user.user_id))
+                # Try to find with both hex and canonical formats
+                user = db.query(User).filter(User.id == user_uuid.hex).first()
                 if not user:
                     user = db.query(User).filter(User.id == str(user_uuid)).first()
             except Exception:
-                pass  # Ignore UUID conversion errors
+                pass  # If UUID conversion fails, continue to raise error
 
         if not user:
             # The user ID exists in the token but not in the database
@@ -143,21 +167,37 @@ async def chat(
         # Validate that the user_id in the path matches the user in the JWT
         # Handle UUID format differences (canonical vs hex string vs different representations)
         current_user_id_str = str(current_user.id)
+        logger.info(f"Path user_id: {user_id}")  # Debug log
+        logger.info(f"Current user ID: {current_user_id_str}")  # Debug log
 
         # Normalize both UUIDs to ensure consistent comparison
         try:
-            # Convert both to UUID objects to normalize the format
-            path_uuid = uuid.UUID(user_id)
-            user_uuid = uuid.UUID(current_user_id_str)
+            # Convert the path user_id to UUID object (could be canonical or hex format)
+            try:
+                path_uuid = uuid.UUID(user_id)
+                path_uuid_hex = path_uuid.hex  # Convert to hex format (32 chars without dashes)
+            except ValueError:
+                # If it's not a valid UUID string, assume it's already in hex format
+                path_uuid_hex = user_id
 
-            # Compare the UUID objects (this handles different string representations)
-            if user_uuid != path_uuid:
+            # Convert the current user ID to UUID object (could be canonical or hex format)
+            try:
+                user_uuid = uuid.UUID(current_user_id_str)
+                user_uuid_hex = user_uuid.hex  # Convert to hex format (32 chars without dashes)
+            except ValueError:
+                # If it's not a valid UUID string, assume it's already in hex format
+                user_uuid_hex = current_user_id_str
+
+            # Compare the hex representations (both should be in the same format now)
+            logger.info(f"Comparing path UUID hex: {path_uuid_hex} with user UUID hex: {user_uuid_hex}")  # Debug log
+            if user_uuid_hex != path_uuid_hex:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"User ID mismatch: token user_id={user_uuid}, path user_id={path_uuid}"
+                    detail=f"User ID mismatch: token user_id={user_uuid_hex}, path user_id={path_uuid_hex}"
                 )
         except (ValueError, TypeError) as e:
             # If UUID conversion fails, compare as strings but log the issue
+            logger.warning(f"UUID conversion failed: {e}")
             if current_user_id_str != user_id:
                 logger.warning(f"User ID format issue: current_user_id='{current_user_id_str}', path_user_id='{user_id}'")
                 raise HTTPException(

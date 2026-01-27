@@ -54,8 +54,8 @@ export default function EditTaskForm({ task, onSave, onCancel }: EditTaskFormPro
       });
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        window.location.href = '/login';
+        // Token expired or invalid, show error message
+        alert('Your session has expired. Please refresh the page or log in again.');
         return;
       }
 

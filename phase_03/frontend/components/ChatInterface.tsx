@@ -74,14 +74,38 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
     setIsLoading(true);
 
     try {
-      // Get the auth token from cookies
+      // Get the auth token from cookies (primary storage)
+      let token = null;
       const cookies = document.cookie.split('; ');
       const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
-      const token = authTokenRow ? authTokenRow.split('=')[1] : null;
+      if (authTokenRow) {
+        token = authTokenRow.split('=')[1];
+      }
+
+      // Fallback: try to get token from localStorage if not in cookies
+      if (!token) {
+        const tokenFromStorage = localStorage.getItem('auth_token');
+        if (tokenFromStorage) {
+          token = tokenFromStorage;
+        }
+      }
+
+      // Fallback: try to get token from sessionStorage
+      if (!token) {
+        const tokenFromSession = sessionStorage.getItem('auth_token');
+        if (tokenFromSession) {
+          token = tokenFromSession;
+        }
+      }
+
+      console.log("TOKEN SEND 👉", token); // Debug log
 
       if (!token) {
         throw new Error('Authentication token not found');
       }
+
+      // Ensure the token is properly formatted (remove any whitespace)
+      token = token.trim();
 
       // Call the frontend proxy API which forwards to the backend
       const response = await fetch(`/api/chat/${userId}`, {
@@ -97,8 +121,16 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        window.location.href = '/login';
+        // Token expired or invalid, show error message instead of redirecting
+        const errorMessage: Message = {
+          id: `error-${Date.now()}`,
+          role: 'assistant',
+          content: 'Your session has expired. Please refresh the page or log in again.',
+          timestamp: new Date(),
+        };
+
+        setMessages(prev => [...prev, errorMessage]);
+        setIsLoading(false);
         return;
       }
 

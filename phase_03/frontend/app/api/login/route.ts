@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      process.env.JWT_SECRET || 'fallback_secret',
+      process.env.BETTER_AUTH_SECRET || process.env.JWT_SECRET || 'fallback_secret',
       { expiresIn: '24h' }
     );
 

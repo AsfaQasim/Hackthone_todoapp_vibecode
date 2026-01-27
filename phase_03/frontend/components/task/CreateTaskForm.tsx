@@ -24,17 +24,6 @@ export default function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
       return;
     }
 
-    // Check if user is authenticated by checking for auth token
-    const tokenExists = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('auth_token='));
-
-    if (!tokenExists) {
-      setError('User not authenticated');
-      setLoading(false);
-      return;
-    }
-
     try {
       // Get the auth token from cookies
       const cookies = document.cookie.split('; ');
@@ -58,6 +47,13 @@ export default function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
           description: description.trim(),
         }),
       });
+
+      if (response.status === 401) {
+        // Token expired or invalid
+        setError('Your session has expired. Please refresh the page or log in again.');
+        setLoading(false);
+        return;
+      }
 
       if (!response.ok) {
         const errorData = await response.json();

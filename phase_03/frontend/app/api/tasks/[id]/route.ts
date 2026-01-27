@@ -38,7 +38,7 @@ async function getUserIdFromRequest(request: Request): Promise<number | null> {
 
     // Decode the JWT token to get user info
     // In a real app, you'd use the actual JWT secret from environment variables
-    const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    const decoded: any = jwt.verify(token, process.env.BETTER_AUTH_SECRET || process.env.JWT_SECRET || 'fallback_secret');
     return decoded.userId;
   } catch (error) {
     console.error('Error decoding token:', error);

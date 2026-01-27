@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Define protected routes
-const protectedRoutes = ['/dashboard', '/tasks', '/profile', '/settings'];
+const protectedRoutes = ['/dashboard', '/tasks', '/profile', '/settings', '/chat'];
 const authRoutes = ['/login', '/signup'];
 
 export function middleware(request: NextRequest) {
@@ -15,6 +15,15 @@ export function middleware(request: NextRequest) {
   const isAuthRoute = authRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)
   );
+
+  // Special handling for API routes
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api');
+
+  // For API routes, don't redirect - just continue with the request
+  // The API routes will handle authentication internally
+  if (isApiRoute) {
+    return NextResponse.next();
+  }
 
   // Get the session cookie to check authentication status
   // Using a generic approach for our simple auth system

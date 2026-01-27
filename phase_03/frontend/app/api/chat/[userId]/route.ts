@@ -6,9 +6,25 @@ export async function POST(request: NextRequest, { params }: { params: { userId:
   const { userId } = params;
   const body = await request.json();
 
-  // Get the auth token from cookies
+  // Get the auth token from cookies (primary storage)
+  let authToken = null;
   const authCookie = cookies().get('auth_token');
-  if (!authCookie) {
+  if (authCookie) {
+    authToken = authCookie.value.trim(); // Ensure no whitespace
+  }
+
+  // Fallback: try to get token from Authorization header if not in cookies
+  if (!authToken) {
+    const authHeader = request.headers.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      authToken = authHeader.substring(7).trim(); // Ensure no whitespace
+    }
+  }
+
+  if (!authToken) {
+    console.error('Authentication token not found in cookies or authorization header');
+    console.log('Cookies available:', cookies());
+    console.log('Request headers:', Object.fromEntries(request.headers.entries()));
     return new Response(JSON.stringify({ error: 'Authentication token not found' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -17,14 +33,23 @@ export async function POST(request: NextRequest, { params }: { params: { userId:
 
   try {
     // Forward the request to the backend
+    // The backend expects the route format: POST /api/{userId}/chat
     const backendResponse = await fetch(`http://localhost:8000/api/${userId}/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authCookie.value}`,
+        'Authorization': `Bearer ${authToken}`,
       },
       body: JSON.stringify(body),
     });
+
+    // If backend returns 401, propagate it to the frontend
+    if (backendResponse.status === 401) {
+      return new Response(JSON.stringify({ error: 'Authentication failed' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     // Check if the response is JSON or plain text
     const contentType = backendResponse.headers.get('content-type');

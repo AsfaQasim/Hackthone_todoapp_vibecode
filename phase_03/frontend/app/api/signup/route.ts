@@ -3,6 +3,7 @@ import { createUser, findUserByEmail } from '../../../lib/db/models';
 import { initializeDatabase } from '../../../lib/db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
 
 let dbInitialized = false;
 
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     // Normalize email to lowercase
     const normalizedEmail = email.toLowerCase();
 
-    // Check if user already exists
+    // Check if user already exists in frontend database
     const existingUser = await findUserByEmail(normalizedEmail);
     if (existingUser) {
       return NextResponse.json(
@@ -36,13 +37,27 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create new user with hashed password
+    // Create new user with hashed password in frontend database
     const newUser = await createUser(normalizedEmail, password);
+
+    // Also create user in backend database
+    try {
+      // Generate a UUID for the backend user
+      const backendUserId = uuidv4();
+
+      // Call backend API to create user (if such endpoint exists)
+      // For now, we'll just create a placeholder - in a real scenario,
+      // you'd have a backend endpoint to create users
+      console.log(`Would create user in backend with ID: ${backendUserId}, email: ${normalizedEmail}`);
+    } catch (backendError) {
+      console.error('Error creating user in backend:', backendError);
+      // Don't fail the signup just because backend sync failed
+    }
 
     // Generate JWT token
     const token = jwt.sign(
       { userId: newUser.id, email: newUser.email },
-      process.env.JWT_SECRET || 'fallback_secret',
+      process.env.BETTER_AUTH_SECRET || process.env.JWT_SECRET || 'fallback_secret',
       { expiresIn: '24h' }
     );
 
