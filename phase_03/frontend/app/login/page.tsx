@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import PageTransition from '../../components/PageTransition';
+import { signIn } from '../../lib/auth-client';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -22,23 +23,12 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const result = await signIn({ email, password });
 
-      if (res.ok) {
-        const data = await res.json();
-        // Store the JWT token in a cookie
-        document.cookie = `auth_token=${data.token}; path=/; max-age=${24 * 60 * 60};`; // 24 hours
-        router.push('/dashboard'); // Redirect to dashboard
-      } else {
-        const errorText = await res.text();
-        setError(errorText || 'Invalid email or password');
+      if (result.error) {
+        setError(result.error.message || 'Invalid email or password');
       }
+      // If successful, the signIn function handles the redirect to dashboard
     } catch (err) {
       setError('An unexpected error occurred');
       console.error(err);

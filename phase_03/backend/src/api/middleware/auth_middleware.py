@@ -17,8 +17,9 @@ async def auth_middleware(request: Request, call_next):
         "/login", "/register", "/signup", "/auth/login", "/auth/register", "/auth/signup"
     ]
 
-    # Check if this is a chat endpoint that should be handled by route-specific auth
-    is_chat_endpoint = request.url.path.startswith("/api/") and "/chat/" in request.url.path
+    # Chat endpoints should be more resilient to auth issues
+    # Per requirements: NEVER return 401 for chat endpoints
+    is_chat_endpoint = request.url.path.startswith("/api/") and "/chat" in request.url.path
 
     # Also check for paths that start with auth patterns
     is_public = any(request.url.path.startswith(path) for path in public_paths)

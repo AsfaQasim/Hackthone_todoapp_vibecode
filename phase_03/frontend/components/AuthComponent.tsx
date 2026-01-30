@@ -28,24 +28,25 @@ export default function AuthComponent({ onAuthSuccess }: AuthFormProps) {
           password,
         });
 
-
         if (result?.error) {
           setError(result.error.message || 'Login failed');
         } else {
-          onAuthSuccess(); // Notify parent component of successful auth
+          // The signIn function handles redirection to dashboard
+          // No need to call onAuthSuccess since we're redirecting
         }
       } else {
         // Sign up flow
         const result = await authClient.signUp.email({
           email,
-          password
+          password,
+          name
         });
 
         if (result?.error) {
           setError(result.error.message || 'Signup failed');
         } else {
-          // Automatically switch to login after successful signup
-          setIsLogin(true);
+          // The signUp function handles redirection to dashboard
+          // No need to switch to login or call onAuthSuccess since we're redirecting
         }
       }
     } catch (err) {

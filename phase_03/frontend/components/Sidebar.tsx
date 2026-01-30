@@ -18,7 +18,7 @@ const Sidebar = () => {
 
   const handleLogout = () => {
     // Remove the auth token from cookies
-    document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
+    document.cookie = 'auth_token=; Max-Age=0; path=/; domain=; secure=false; samesite=lax';
     // Redirect to login page
     window.location.href = '/login';
   };

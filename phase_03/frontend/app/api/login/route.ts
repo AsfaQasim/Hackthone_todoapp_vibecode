@@ -14,7 +14,10 @@ export async function POST(request: Request) {
       dbInitialized = true;
     }
 
-    const { email, password } = await request.json();
+    const body = await request.json();
+    console.log('Login request body:', body); // Debug log
+
+    const { email, password } = body;
 
     // Basic validation
     if (!email || !password) {
@@ -30,6 +33,7 @@ export async function POST(request: Request) {
     // Find user by email
     const user = await findUserByEmail(normalizedEmail);
     if (!user) {
+      console.log('User not found for email:', normalizedEmail); // Debug log
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
@@ -38,7 +42,10 @@ export async function POST(request: Request) {
 
     // Compare password with hashed password
     const isPasswordValid = await bcrypt.compare(password, user.password);
+    console.log('Password comparison result:', isPasswordValid); // Debug log
+
     if (!isPasswordValid) {
+      console.log('Invalid password for user:', normalizedEmail); // Debug log
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
@@ -52,11 +59,27 @@ export async function POST(request: Request) {
       { expiresIn: '24h' }
     );
 
-    return NextResponse.json({
+    console.log('Generated token for user:', user.id); // Debug log
+
+    // Create response with token in cookie
+    const response = NextResponse.json({
       message: 'Login successful',
       user: { id: user.id, email: user.email },
-      token, // Include the token in the response
+      token, // Include the token in the response for compatibility
     });
+
+    // Set HTTP-only cookie with the token
+    response.cookies.set('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+      maxAge: 60 * 60 * 24, // 24 hours
+      sameSite: 'lax', // CSRF protection
+      path: '/', // Cookie is available for the entire site
+    });
+
+    console.log('Set auth_token cookie'); // Debug log
+
+    return response;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(

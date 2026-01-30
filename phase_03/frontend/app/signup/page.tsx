@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button';
 import { Mail, Lock, CheckCircle, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import PageTransition from '../../components/PageTransition';
+import { authClient } from '../../lib/auth-client';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -36,28 +37,12 @@ export default function SignupPage() {
     }
 
     try {
-      const res = await fetch('/api/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const result = await authClient.signUp.email({ email, password });
 
-      if (res.ok) {
-        const data = await res.json();
-        // If the API returns a token, store it in a cookie
-        if (data.token) {
-          document.cookie = `auth_token=${data.token}; path=/; max-age=${24 * 60 * 60};`; // 24 hours
-          router.push('/dashboard'); // Redirect to dashboard
-        } else {
-          alert('Account created successfully! Please login.');
-          router.push('/login'); // Redirect to login
-        }
-      } else {
-        const errorText = await res.text();
-        setError(errorText || 'An error occurred during signup');
+      if (result.error) {
+        setError(result.error.message || 'An error occurred during signup');
       }
+      // If successful, the signUp function handles the redirect to dashboard
     } catch (err) {
       setError('An unexpected error occurred');
       console.error(err);

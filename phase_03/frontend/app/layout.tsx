@@ -4,6 +4,7 @@ import "./globals.css";
 import Layout from '../components/Layout';
 import MotionWrapper from '../components/MotionWrapper';
 import ThreeDBackground from '../components/ThreeDBackground';
+import { AuthProvider } from '../contexts/AuthContext';
 
 const inter = Inter({
   variable: "--font-inter",
@@ -25,12 +26,14 @@ export default function RootLayout({
       <body
         className={`${inter.variable} antialiased bg-gray-900 text-gray-100 relative overflow-x-hidden`}
       >
-        <ThreeDBackground />
-        <MotionWrapper>
-          <Layout>
-            {children}
-          </Layout>
-        </MotionWrapper>
+        <AuthProvider>
+          <ThreeDBackground />
+          <MotionWrapper>
+            <Layout>
+              {children}
+            </Layout>
+          </MotionWrapper>
+        </AuthProvider>
       </body>
     </html>
   );

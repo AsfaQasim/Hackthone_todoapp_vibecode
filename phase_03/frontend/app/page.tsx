@@ -4,8 +4,32 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { ArrowRight, CheckCircle, Zap, Shield } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Home() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && user) {
+      // If user is already authenticated, redirect to dashboard
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto"></div>
+          <p className="mt-4 text-gray-300">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <PageTransition>
       <div className="min-h-screen flex flex-col relative overflow-hidden">

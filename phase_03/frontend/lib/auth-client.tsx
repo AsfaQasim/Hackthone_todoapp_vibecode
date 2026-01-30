@@ -46,28 +46,20 @@ export async function signIn(credentials: { email: string; password: string }, o
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // Include cookies in the request
       body: JSON.stringify(credentials),
     });
 
+    // The API route sets the cookie automatically, so we don't need to manually set it
     const data = await response.json();
 
     if (response.ok) {
-      // Store the JWT token in a cookie
-      const expirationDate = new Date();
-      expirationDate.setDate(expirationDate.getDate() + 1); // 1 day from now
-
-      // Create cookie string without using template literals or regex-sensitive characters
-      const cookieParts = [
-        'auth_token=' + data.token,
-        'path=/',
-        'expires=' + expirationDate.toUTCString(),
-        'SameSite=Lax'
-      ];
-      document.cookie = cookieParts.join('; ');
-
       // Redirect if callbackURL is provided
       if (options?.callbackURL) {
         window.location.href = options.callbackURL;
+      } else {
+        // Default redirect to dashboard after successful login
+        window.location.href = '/dashboard';
       }
 
       return { error: null, data };
@@ -87,27 +79,16 @@ export async function signUp(credentials: { email: string; password: string; nam
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // Include cookies in the request
       body: JSON.stringify(credentials),
     });
 
+    // The API route sets the cookie automatically after successful signup
     const data = await response.json();
 
     if (response.ok) {
-      // Store the JWT token in a cookie if returned
-      if (data.token) {
-        const expirationDate = new Date();
-        expirationDate.setDate(expirationDate.getDate() + 1); // 1 day from now
-
-        // Create cookie string without using template literals or regex-sensitive characters
-        const cookieParts = [
-          'auth_token=' + data.token,
-          'path=/',
-          'expires=' + expirationDate.toUTCString(),
-          'SameSite=Lax'
-        ];
-        document.cookie = cookieParts.join('; ');
-      }
-
+      // After successful signup, redirect to dashboard (since user is now logged in)
+      window.location.href = '/dashboard';
       return { error: null, data };
     } else {
       return { error: { message: data.error || 'Signup failed' }, data: null };

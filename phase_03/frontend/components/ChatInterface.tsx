@@ -16,9 +16,10 @@ interface Message {
 
 interface ChatInterfaceProps {
   userId: string;
+  onTaskAdded?: () => void;  // Callback to notify parent when a task is added
 }
 
-export default function ChatInterface({ userId }: ChatInterfaceProps) {
+export default function ChatInterface({ userId, onTaskAdded }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome-message',
@@ -114,6 +115,7 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
+        credentials: 'include', // Include cookies in the request
         body: JSON.stringify({
           message: inputValue,
           conversation_id: localStorage.getItem('conversation_id') || null,
@@ -140,7 +142,7 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
       }
 
       const data = await response.json();
-      
+
       // Save conversation ID to localStorage
       localStorage.setItem('conversation_id', data.conversation_id);
 
@@ -154,6 +156,22 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
+      // Check if any tool calls were made that affect the task list
+      if (data.tool_calls && Array.isArray(data.tool_calls)) {
+        const hasTaskRelatedCall = data.tool_calls.some((call: any) =>
+          call.tool_name === 'add_task' ||
+          call.tool_name === 'create_task' ||
+          call.tool_name === 'createTask' ||
+          call.tool_name === 'update_task' ||
+          call.tool_name === 'delete_task'
+        );
+
+        if (hasTaskRelatedCall && onTaskAdded) {
+          // Call the callback to notify parent component that tasks may have changed
+          onTaskAdded();
+        }
+      }
     } catch (error: any) {
       console.error('Error sending message:', error);
       

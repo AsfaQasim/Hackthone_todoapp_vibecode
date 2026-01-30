@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "set NEXT_PRIVATE_SKIP_SWC_INSTALLATION=1 && next dev",
-    "build": "set NEXT_PRIVATE_SKIP_SWC_INSTALLATION=1 && next build",
-    "start": "set NEXT_PRIVATE_SKIP_SWC_INSTALLATION=1 && next start",
+    "dev": "cross-env NEXT_PRIVATE_SKIP_SWC_INSTALLATION=1 next dev",
+    "build": "cross-env NEXT_PRIVATE_SKIP_SWC_INSTALLATION=1 next build",
+    "start": "cross-env NEXT_PRIVATE_SKIP_SWC_INSTALLATION=1 next start",
     "lint": "next lint",
     "test-db": "tsx test-db-connection.ts"
   },

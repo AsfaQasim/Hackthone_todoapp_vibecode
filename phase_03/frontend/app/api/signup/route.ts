@@ -15,7 +15,10 @@ export async function POST(request: Request) {
       dbInitialized = true;
     }
 
-    const { email, password } = await request.json();
+    const body = await request.json();
+    console.log('Signup request body:', body); // Debug log
+
+    const { email, password, name } = body;
 
     // Basic validation
     if (!email || !password) {
@@ -61,17 +64,33 @@ export async function POST(request: Request) {
       { expiresIn: '24h' }
     );
 
+    console.log('Generated token for new user:', newUser.id); // Debug log
+
     // Don't return the password in the response
     const { password: _, ...userWithoutPassword } = newUser;
 
-    return NextResponse.json(
+    // Create response with token in cookie
+    const response = NextResponse.json(
       {
         message: 'User created successfully',
         user: userWithoutPassword,
-        token // Include the token in the response
+        token // Include the token in the response for compatibility
       },
       { status: 201 }
     );
+
+    // Set HTTP-only cookie with the token to automatically log in the user
+    response.cookies.set('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+      maxAge: 60 * 60 * 24, // 24 hours
+      sameSite: 'lax', // CSRF protection
+      path: '/', // Cookie is available for the entire site
+    });
+
+    console.log('Set auth_token cookie after signup'); // Debug log
+
+    return response;
   } catch (error: any) {
     console.error('Signup error:', error);
 

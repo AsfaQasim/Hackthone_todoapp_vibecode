@@ -1,3 +1,7 @@
+
+
+
+
 ---
 id: 102
 title: Frontend Auth Implementation
