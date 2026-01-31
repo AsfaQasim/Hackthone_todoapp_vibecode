@@ -32,56 +32,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const checkExistingSession = async () => {
       console.log('Checking existing session...'); // Debug log
       try {
-        // Check if we're in the browser (not during SSR)
-        if (typeof window !== 'undefined') {
-          // Check for auth token in cookies
-          const cookies = document.cookie.split('; ');
-          console.log('Cookies found:', cookies.length); // Debug log
+        // Make an API call to verify the session
+        // This works even with httpOnly cookies since the request includes them automatically
+        const response = await fetch('/api/session', {
+          method: 'GET',
+          credentials: 'include', // Include cookies in the request
+        });
 
-          const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
-          console.log('Auth token row found:', !!authTokenRow); // Debug log
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Session verified:', data); // Debug log
 
-          if (authTokenRow) {
-            const token = authTokenRow.split('=')[1];
-            console.log('Token found, length:', token.length); // Debug log
+          // Create user object from the session data
+          const userInfo: User = {
+            id: data.user.id || 'unknown',
+            email: data.user.email || 'unknown@example.com',
+            name: data.user.name,
+          };
 
-            // Decode JWT token to get user info
-            const tokenParts = token.split('.');
-            if (tokenParts.length === 3) {
-              try {
-                // Add padding to base64 string if needed
-                let base64Payload = tokenParts[1];
-                while (base64Payload.length % 4) {
-                  base64Payload += '=';
-                }
-                const payload = JSON.parse(atob(base64Payload));
-                console.log('Decoded payload:', payload); // Debug log
-
-                // Create user object from token payload
-                const userInfo: User = {
-                  id: payload.sub || payload.userId || payload.user_id || payload.id || 'unknown',
-                  email: payload.email || 'unknown@example.com',
-                  name: payload.name || payload.full_name,
-                };
-
-                setUser(userInfo);
-              } catch (e) {
-                console.error('Error decoding token:', e);
-                // If token decoding fails, we still have a token but can't parse user info
-                // So we'll set a minimal user object
-                setUser({
-                  id: 'unknown',
-                  email: 'unknown@example.com',
-                });
-              }
-            }
-          } else {
-            console.log('No auth token found in cookies'); // Debug log
-          }
+          setUser(userInfo);
         } else {
-          console.log('Not in browser, skipping session check'); // Debug log
+          console.log('No active session found'); // Debug log
         }
-        // If no token is found, user remains null, which is fine
       } catch (error) {
         console.error('Error checking existing session:', error);
       } finally {

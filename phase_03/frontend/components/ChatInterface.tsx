@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Send, Bot, User } from 'lucide-react';
 import Button from './ui/Button';
 import Textarea from './Textarea';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Message {
   id: string;
@@ -20,6 +21,7 @@ interface ChatInterfaceProps {
 }
 
 export default function ChatInterface({ userId, onTaskAdded }: ChatInterfaceProps) {
+  const { user, loading: authLoading } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome-message',
@@ -60,7 +62,7 @@ export default function ChatInterface({ userId, onTaskAdded }: ChatInterfaceProp
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || isLoading) return;
+    if (!inputValue.trim() || isLoading || authLoading) return;
 
     // Add user message
     const userMessage: Message = {
@@ -75,45 +77,23 @@ export default function ChatInterface({ userId, onTaskAdded }: ChatInterfaceProp
     setIsLoading(true);
 
     try {
-      // Get the auth token from cookies (primary storage)
-      let token = null;
-      const cookies = document.cookie.split('; ');
-      const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
-      if (authTokenRow) {
-        token = authTokenRow.split('=')[1];
+      // Wait for auth to finish loading, then check if user is authenticated
+      if (authLoading) {
+        // Wait a bit for auth to load if still loading
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      // Fallback: try to get token from localStorage if not in cookies
-      if (!token) {
-        const tokenFromStorage = localStorage.getItem('auth_token');
-        if (tokenFromStorage) {
-          token = tokenFromStorage;
-        }
+      if (!user) {
+        throw new Error('User not authenticated');
       }
-
-      // Fallback: try to get token from sessionStorage
-      if (!token) {
-        const tokenFromSession = sessionStorage.getItem('auth_token');
-        if (tokenFromSession) {
-          token = tokenFromSession;
-        }
-      }
-
-      console.log("TOKEN SEND 👉", token); // Debug log
-
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-
-      // Ensure the token is properly formatted (remove any whitespace)
-      token = token.trim();
 
       // Call the frontend proxy API which forwards to the backend
+      // The auth cookie will be included automatically with credentials: 'include'
       const response = await fetch(`/api/chat/${userId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          // The API route will extract the token from cookies and forward it to the backend
         },
         credentials: 'include', // Include cookies in the request
         body: JSON.stringify({
