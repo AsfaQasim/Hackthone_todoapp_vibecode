@@ -13,12 +13,11 @@ import { GuestOnlyRoute } from '../../components/RouteProtector';
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const router = useRouter();
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,8 +32,8 @@ export default function LoginPage() {
       if (!success) {
         setError('Invalid email or password');
       } else {
-        console.log('Login successful, redirecting to dashboard...');
-        router.replace('/dashboard');
+        console.log('Login successful, GuestOnlyRoute will handle redirect...');
+        // Redirect is handled by GuestOnlyRoute component
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -109,7 +108,7 @@ export default function LoginPage() {
                         id="password"
                         name="password"
                         type="password"
-                        autoComplete="new-password"
+                        autoComplete="current-password"
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -122,7 +121,7 @@ export default function LoginPage() {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
+                    transition={{ delay: 0.5 }}
                   >
                     <Button
                       type="submit"
@@ -140,7 +139,7 @@ export default function LoginPage() {
                   <motion.p
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.7 }}
+                    transition={{ delay: 0.6 }}
                     className="text-sm text-gray-400"
                   >
                     Don't have an account?{' '}

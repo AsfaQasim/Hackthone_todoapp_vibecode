@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { ProtectedRoute } from '../../components/RouteProtector';
 
 interface Todo {
   id: string;
@@ -14,24 +15,11 @@ interface Todo {
 }
 
 export default function TodosPage() {
-  const router = useRouter();
+  const { user } = useAuth();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState({ title: '', description: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Check if user is authenticated by checking for auth token
-    const tokenExists = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('auth_token='));
-
-    if (!tokenExists) {
-      router.push('/login'); // Redirect to login if not authenticated
-    } else {
-      fetchTodos();
-    }
-  }, [router]);
 
   const fetchTodos = async () => {
     try {
@@ -43,8 +31,7 @@ export default function TodosPage() {
       const token = authTokenRow ? authTokenRow.split('=')[1] : null;
 
       if (!token) {
-        router.push('/login');
-        return;
+        return; // Will be handled by ProtectedRoute
       }
 
       const response = await fetch('/api/tasks', {
@@ -54,8 +41,7 @@ export default function TodosPage() {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        router.push('/login');
+        // Token expired or invalid, will be handled by ProtectedRoute
         return;
       }
 
@@ -82,8 +68,7 @@ export default function TodosPage() {
     const token = authTokenRow ? authTokenRow.split('=')[1] : null;
 
     if (!token) {
-      router.push('/login');
-      return;
+      return; // Will be handled by ProtectedRoute
     }
 
     try {
@@ -97,8 +82,7 @@ export default function TodosPage() {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        router.push('/login');
+        // Token expired or invalid, will be handled by ProtectedRoute
         return;
       }
 
@@ -136,8 +120,7 @@ export default function TodosPage() {
     const token = authTokenRow ? authTokenRow.split('=')[1] : null;
 
     if (!token) {
-      router.push('/login');
-      return;
+      return; // Will be handled by ProtectedRoute
     }
 
     try {
@@ -151,8 +134,7 @@ export default function TodosPage() {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        router.push('/login');
+        // Token expired or invalid, will be handled by ProtectedRoute
         return;
       }
 
@@ -186,8 +168,7 @@ export default function TodosPage() {
     const token = authTokenRow ? authTokenRow.split('=')[1] : null;
 
     if (!token) {
-      router.push('/login');
-      return;
+      return; // Will be handled by ProtectedRoute
     }
 
     try {
@@ -199,8 +180,7 @@ export default function TodosPage() {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        router.push('/login');
+        // Token expired or invalid, will be handled by ProtectedRoute
         return;
       }
 
@@ -227,91 +207,93 @@ export default function TodosPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white shadow rounded-lg p-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">My Todos</h1>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white shadow rounded-lg p-6">
+            <h1 className="text-3xl font-bold text-gray-900 mb-6">My Todos</h1>
 
-          <form onSubmit={handleAddTodo} className="mb-8 p-4 bg-gray-50 rounded-lg">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="md:col-span-2">
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  id="title"
-                  value={newTodo.title}
-                  onChange={(e) => setNewTodo({...newTodo, title: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Todo title"
-                  required
-                />
+            <form onSubmit={handleAddTodo} className="mb-8 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-2">
+                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    id="title"
+                    value={newTodo.title}
+                    onChange={(e) => setNewTodo({...newTodo, title: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Todo title"
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <input
+                    type="text"
+                    id="description"
+                    value={newTodo.description}
+                    onChange={(e) => setNewTodo({...newTodo, description: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Todo description"
+                  />
+                </div>
               </div>
-              <div className="md:col-span-2">
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <input
-                  type="text"
-                  id="description"
-                  value={newTodo.description}
-                  onChange={(e) => setNewTodo({...newTodo, description: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Todo description"
-                />
+              <div className="mt-4">
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                >
+                  Add Todo
+                </button>
               </div>
-            </div>
-            <div className="mt-4">
-              <button
-                type="submit"
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-              >
-                Add Todo
-              </button>
-            </div>
-          </form>
+            </form>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+                {error}
+              </div>
+            )}
 
-          {loading ? (
-            <p className="text-center py-4">Loading todos...</p>
-          ) : todos.length === 0 ? (
-            <p className="text-center py-4 text-gray-500">No todos yet. Add one above!</p>
-          ) : (
-            <ul className="divide-y divide-gray-200">
-              {todos.map((todo) => (
-                <li key={todo.id} className="py-4 flex items-center justify-between">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={todo.completed}
-                      onChange={() => toggleTodo(todo.id)}
-                      className="h-4 w-4 text-indigo-600 rounded focus:ring-indigo-500"
-                    />
-                    <span className={`ml-3 ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                      {todo.title}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <span className="text-sm text-gray-500">{todo.description}</span>
-                    <button
-                      onClick={() => deleteTodo(todo.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+            {loading ? (
+              <p className="text-center py-4">Loading todos...</p>
+            ) : todos.length === 0 ? (
+              <p className="text-center py-4 text-gray-500">No todos yet. Add one above!</p>
+            ) : (
+              <ul className="divide-y divide-gray-200">
+                {todos.map((todo) => (
+                  <li key={todo.id} className="py-4 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={todo.completed}
+                        onChange={() => toggleTodo(todo.id)}
+                        className="h-4 w-4 text-indigo-600 rounded focus:ring-indigo-500"
+                      />
+                      <span className={`ml-3 ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                        {todo.title}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <span className="text-sm text-gray-500">{todo.description}</span>
+                      <button
+                        onClick={() => deleteTodo(todo.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

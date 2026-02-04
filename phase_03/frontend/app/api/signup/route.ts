@@ -1,52 +1,75 @@
-import { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { createUser, findUserByEmail } from '../../../lib/db/models';
+import { initializeDatabase } from '../../../lib/db';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
-export async function POST(request: NextRequest) {
+let dbInitialized = false;
+
+export async function POST(request: Request) {
   try {
-    // Extract the signup credentials from the request
-    const body = await request.json();
+    // Initialize database if not already done
+    if (!dbInitialized) {
+      await initializeDatabase();
+      dbInitialized = true;
+    }
 
-    // Forward the request to the backend
-    const backendResponse = await fetch('http://localhost:8000/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    const { email, password } = await request.json();
 
-    const responseData = await backendResponse.json();
-
-    if (backendResponse.ok) {
-      // Create a response object
-      const response = NextResponse.json(responseData);
-
-      // Extract the token from the response
-      const { access_token } = responseData;
-
-      if (access_token) {
-        // Set the token in a cookie
-        response.cookies.set('auth_token', access_token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          maxAge: 60 * 60 * 24, // 24 hours
-          path: '/',
-          sameSite: 'strict',
-        });
-      }
-
-      return response;
-    } else {
-      // If signup failed, return the error
+    // Basic validation
+    if (!email || !password) {
       return NextResponse.json(
-        { error: responseData.detail || 'Signup failed' },
-        { status: backendResponse.status }
+        { error: 'Email and password are required' },
+        { status: 400 }
       );
     }
-  } catch (error) {
-    console.error('Signup proxy error:', error);
+
+    // Normalize email to lowercase
+    const normalizedEmail = email.toLowerCase();
+
+    // Check if user already exists
+    const existingUser = await findUserByEmail(normalizedEmail);
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'User already exists' },
+        { status: 409 }
+      );
+    }
+
+    // Create new user with hashed password
+    const newUser = await createUser(normalizedEmail, password);
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: newUser.id, email: newUser.email },
+      process.env.JWT_SECRET || 'fallback_secret',
+      { expiresIn: '24h' }
+    );
+
+    // Don't return the password in the response
+    const { password: _, ...userWithoutPassword } = newUser;
+
     return NextResponse.json(
-      { error: 'Unable to connect to authentication service' },
+      {
+        message: 'User created successfully',
+        user: userWithoutPassword,
+        token // Include the token in the response
+      },
+      { status: 201 }
+    );
+  } catch (error: any) {
+    console.error('Signup error:', error);
+
+    // Handle unique constraint violation
+    if (error.message?.includes('already exists')) {
+      return NextResponse.json(
+        { error: 'User with this email already exists' },
+        { status: 409 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

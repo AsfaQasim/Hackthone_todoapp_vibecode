@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import Sidebar from '../../components/Sidebar';
 import TaskForm from '../../components/TaskForm';
 import TaskItem from '../../components/TaskItem';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -11,6 +9,8 @@ import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import Skeleton from '../../components/ui/Skeleton';
 import PageTransition from '../../components/PageTransition';
+import { useAuth } from '../../contexts/AuthContext';
+import { ProtectedRoute } from '../../components/RouteProtector';
 
 interface Task {
   id: number;
@@ -22,28 +22,13 @@ interface Task {
 }
 
 export default function TasksPage() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
   const [updatingTaskId, setUpdatingTaskId] = useState<number | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    // Check if user is logged in by checking for auth token in cookies
-    const tokenExists = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('auth_token='));
-
-    if (!tokenExists) {
-      router.push('/login');
-    } else {
-      setIsLoggedIn(true);
-      loadTasks();
-    }
-  }, [router]);
 
   const loadTasks = async () => {
     try {
@@ -55,8 +40,7 @@ export default function TasksPage() {
       const token = authTokenRow ? authTokenRow.split('=')[1] : null;
 
       if (!token) {
-        router.push('/login');
-        return;
+        return; // Will be handled by ProtectedRoute
       }
 
       const response = await fetch('/api/tasks', {
@@ -66,8 +50,7 @@ export default function TasksPage() {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        router.push('/login');
+        // Token expired or invalid, will be handled by ProtectedRoute
         return;
       }
 
@@ -113,8 +96,7 @@ export default function TasksPage() {
       const token = authTokenRow ? authTokenRow.split('=')[1] : null;
 
       if (!token) {
-        router.push('/login');
-        return;
+        return; // Will be handled by ProtectedRoute
       }
 
       const response = await fetch('/api/tasks', {
@@ -130,8 +112,7 @@ export default function TasksPage() {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        router.push('/login');
+        // Token expired or invalid, will be handled by ProtectedRoute
         return;
       }
 
@@ -169,8 +150,7 @@ export default function TasksPage() {
       const token = authTokenRow ? authTokenRow.split('=')[1] : null;
 
       if (!token) {
-        router.push('/login');
-        return;
+        return; // Will be handled by ProtectedRoute
       }
 
       // Find the current task
@@ -197,8 +177,7 @@ export default function TasksPage() {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        router.push('/login');
+        // Token expired or invalid, will be handled by ProtectedRoute
         return;
       }
 
@@ -253,8 +232,7 @@ export default function TasksPage() {
 
       if (!token) {
         console.log('No auth token found in cookies');
-        router.push('/login');
-        return;
+        return; // Will be handled by ProtectedRoute
       }
 
       console.log('Sending delete request for task ID:', taskId);
@@ -270,8 +248,7 @@ export default function TasksPage() {
       console.log('Delete response status:', response.status);
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        router.push('/login');
+        // Token expired or invalid, will be handled by ProtectedRoute
         return;
       }
 
@@ -305,100 +282,85 @@ export default function TasksPage() {
     }
   };
 
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="max-w-md w-full space-y-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-200">Please log in</h2>
-          <p className="text-gray-400">You need to be logged in to access your tasks</p>
-          <button
-            onClick={() => router.push('/login')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Go to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <PageTransition>
-      <div className="max-w-full sm:max-w-md md:max-w-lg lg:max-w-4xl mx-auto px-4 py-6 sm:py-8">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-10 text-center"
-        >
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-            My Tasks
-          </h1>
-          <p className="text-gray-400 mt-2">Manage your daily tasks and boost productivity</p>
-        </motion.div>
-
-        {/* Error Message */}
-        {error && (
+    <ProtectedRoute>
+      <PageTransition>
+        <div className="max-w-full sm:max-w-md md:max-w-lg lg:max-w-4xl mx-auto px-4 py-6 sm:py-8">
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 rounded-lg bg-red-500/20 p-4 border border-red-500/30"
+            transition={{ duration: 0.5 }}
+            className="mb-10 text-center"
           >
-            <div className="text-sm text-red-300">{error}</div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+              My Tasks
+            </h1>
+            <p className="text-gray-400 mt-2">Manage your daily tasks and boost productivity</p>
           </motion.div>
-        )}
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <TaskForm onAddTask={handleAddTask} isLoading={isAddingTask} />
-        </motion.div>
-
-        {/* Tasks Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mt-10"
-        >
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h2 className="text-xl sm:text-2xl font-semibold text-white">Your Tasks</h2>
-            <span className="text-gray-400 text-sm sm:text-base">
-              {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
-            </span>
-          </div>
-
-          {loading ? (
-            <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-              {[...Array(3)].map((_, index) => (
-                <Skeleton key={index} className="h-20 w-full" />
-              ))}
-            </div>
-          ) : tasks.length === 0 ? (
-            <Card className="text-center py-12">
-              <CardContent>
-                <div className="text-gray-400 mb-4">No tasks yet</div>
-                <p className="text-gray-500">Add your first task to get started</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-              {tasks.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onToggleComplete={handleToggleComplete}
-                  onDelete={handleDeleteTask}
-                  isUpdating={updatingTaskId === task.id}
-                  isDeleting={deletingTaskId === task.id}
-                />
-              ))}
-            </div>
+          {/* Error Message */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 rounded-lg bg-red-500/20 p-4 border border-red-500/30"
+            >
+              <div className="text-sm text-red-300">{error}</div>
+            </motion.div>
           )}
-        </motion.div>
-      </div>
-    </PageTransition>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <TaskForm onAddTask={handleAddTask} isLoading={isAddingTask} />
+          </motion.div>
+
+          {/* Tasks Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-10"
+          >
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              <h2 className="text-xl sm:text-2xl font-semibold text-white">Your Tasks</h2>
+              <span className="text-gray-400 text-sm sm:text-base">
+                {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+              </span>
+            </div>
+
+            {loading ? (
+              <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+                {[...Array(3)].map((_, index) => (
+                  <Skeleton key={index} className="h-20 w-full" />
+                ))}
+              </div>
+            ) : tasks.length === 0 ? (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <div className="text-gray-400 mb-4">No tasks yet</div>
+                  <p className="text-gray-500">Add your first task to get started</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+                {tasks.map((task) => (
+                  <TaskItem
+                    key={task.id}
+                    task={task}
+                    onToggleComplete={handleToggleComplete}
+                    onDelete={handleDeleteTask}
+                    isUpdating={updatingTaskId === task.id}
+                    isDeleting={deletingTaskId === task.id}
+                  />
+                ))}
+              </div>
+            )}
+          </motion.div>
+        </div>
+      </PageTransition>
+    </ProtectedRoute>
   );
 }

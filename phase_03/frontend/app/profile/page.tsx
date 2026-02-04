@@ -1,51 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import Sidebar from '../../components/Sidebar';
 import { Card, CardContent } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import PageTransition from '../../components/PageTransition';
 import { useAuth } from '../../contexts/AuthContext';
+import { ProtectedRoute } from '../../components/RouteProtector';
 
 export default function ProfilePage() {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
-  const [checkedAuth, setCheckedAuth] = useState(false);
-
-  useEffect(() => {
-    // Check authentication status after initial loading
-    if (!loading) {
-      if (!isAuthenticated()) {
-        // Redirect to login if not authenticated
-        router.push('/login');
-        router.refresh();
-      } else {
-        // Auth is confirmed, allow rendering
-        setCheckedAuth(true);
-      }
-    }
-  }, [user, loading, isAuthenticated, router]);
-
-  // Show loading state while checking auth
-  if (loading || !checkedAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="max-w-md w-full space-y-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-200">Loading...</h2>
-          <p className="text-gray-400">Verifying your session</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <PageTransition>
-      <div className="flex min-h-screen">
-        <Sidebar />
-        
-        <div className="flex-1 md:ml-64 transition-all duration-300">
+    <ProtectedRoute>
+      <PageTransition>
+        <div className="flex-1 transition-all duration-300">
           <div className="max-w-4xl mx-auto px-4 py-8">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -108,7 +79,7 @@ export default function ProfilePage() {
             </motion.div>
           </div>
         </div>
-      </div>
-    </PageTransition>
+      </PageTransition>
+    </ProtectedRoute>
   );
 }

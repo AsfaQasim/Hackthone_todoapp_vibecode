@@ -1,46 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import Sidebar from '../../components/Sidebar';
 import { Card, CardContent } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import PageTransition from '../../components/PageTransition';
 import { useAuth } from '../../contexts/AuthContext';
+import { ProtectedRoute } from '../../components/RouteProtector';
 
 export default function SettingsPage() {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [theme, setTheme] = useState('dark');
-  const [checkedAuth, setCheckedAuth] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    // Check authentication status after initial loading
-    if (!loading) {
-      if (!isAuthenticated()) {
-        // Redirect to login if not authenticated
-        router.push('/login');
-        router.refresh();
-      } else {
-        // Auth is confirmed, allow rendering
-        setCheckedAuth(true);
-      }
-    }
-  }, [user, loading, isAuthenticated, router]);
-
-  // Show loading state while checking auth
-  if (loading || !checkedAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="max-w-md w-full space-y-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-200">Loading...</h2>
-          <p className="text-gray-400">Verifying your session</p>
-        </div>
-      </div>
-    );
-  }
 
   const handleSaveSettings = () => {
     // In a real app, you would save settings to the backend
@@ -48,29 +21,10 @@ export default function SettingsPage() {
     alert('Settings saved successfully!');
   };
 
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="max-w-md w-full space-y-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-200">Please log in</h2>
-          <p className="text-gray-400">You need to be logged in to access settings</p>
-          <Button
-            onClick={() => router.push('/login')}
-            variant="primary"
-          >
-            Go to Login
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <PageTransition>
-      <div className="flex min-h-screen">
-        <Sidebar />
-        
-        <div className="flex-1 md:ml-64 transition-all duration-300">
+    <ProtectedRoute>
+      <PageTransition>
+        <div className="flex-1 transition-all duration-300">
           <div className="max-w-4xl mx-auto px-4 py-8">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -94,7 +48,7 @@ export default function SettingsPage() {
                 <CardContent className="p-0">
                   <div className="p-6">
                     <h2 className="text-xl font-semibold text-white mb-4">Notification Preferences</h2>
-                    
+
                     <div className="flex items-center justify-between py-3 border-b border-gray-800">
                       <div>
                         <h3 className="font-medium text-gray-200">Email Notifications</h3>
@@ -110,7 +64,7 @@ export default function SettingsPage() {
                         <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-cyan-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
                       </label>
                     </div>
-                    
+
                     <div className="flex items-center justify-between py-3">
                       <div>
                         <h3 className="font-medium text-gray-200">Push Notifications</h3>
@@ -134,7 +88,7 @@ export default function SettingsPage() {
                 <CardContent className="p-0">
                   <div className="p-6">
                     <h2 className="text-xl font-semibold text-white mb-4">Appearance</h2>
-                    
+
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-300 mb-2">Theme</label>
                       <div className="grid grid-cols-3 gap-4">
@@ -151,7 +105,7 @@ export default function SettingsPage() {
                             <span className="text-gray-300">Light</span>
                           </div>
                         </button>
-                        
+
                         <button
                           onClick={() => setTheme('dark')}
                           className={`p-4 rounded-lg border ${
@@ -165,7 +119,7 @@ export default function SettingsPage() {
                             <span className="text-gray-300">Dark</span>
                           </div>
                         </button>
-                        
+
                         <button
                           onClick={() => setTheme('system')}
                           className={`p-4 rounded-lg border ${
@@ -181,9 +135,9 @@ export default function SettingsPage() {
                         </button>
                       </div>
                     </div>
-                    
-                    <Button 
-                      variant="primary" 
+
+                    <Button
+                      variant="primary"
                       className="w-full"
                       onClick={handleSaveSettings}
                     >
@@ -195,7 +149,7 @@ export default function SettingsPage() {
             </motion.div>
           </div>
         </div>
-      </div>
-    </PageTransition>
+      </PageTransition>
+    </ProtectedRoute>
   );
 }

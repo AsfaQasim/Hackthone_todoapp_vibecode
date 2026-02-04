@@ -47,8 +47,8 @@ export default function SignupPage() {
       if (!success) {
         setError('An error occurred during signup');
       } else {
-        console.log('Signup successful, redirecting to dashboard...');
-        router.replace('/dashboard');
+        console.log('Signup successful, GuestOnlyRoute will handle redirect...');
+        // Redirect is handled by GuestOnlyRoute component
       }
     } catch (err) {
       setError('An unexpected error occurred');

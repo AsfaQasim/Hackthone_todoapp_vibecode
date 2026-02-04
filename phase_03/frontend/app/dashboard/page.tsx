@@ -1,8 +1,10 @@
+
+
+
 'use client';
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import Sidebar from '../../components/Sidebar';
 import ChatInterface from '../../components/ChatInterface';
 import TaskForm from '../../components/TaskForm';
 import TaskItem from '../../components/TaskItem';
@@ -123,115 +125,112 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute>
       <PageTransition>
-        <div className="flex h-screen bg-gray-950">
-          <Sidebar />
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <header className="bg-gray-900 border-b border-gray-800 p-4">
-              <div className="flex items-center">
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-                  Dashboard
-                </h1>
-              </div>
-            </header>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <header className="bg-gray-900 border-b border-gray-800 p-4">
+            <div className="flex items-center">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                Dashboard
+              </h1>
+            </div>
+          </header>
 
-            <main className="flex-1 overflow-y-auto p-4 md:p-6">
-              <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <main className="flex-1 overflow-y-auto p-4 md:p-6">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Tasks Section */}
+              <div className="bg-gray-900/50 backdrop-blur-lg border border-gray-800 rounded-xl p-4">
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="mb-6 text-center"
+                >
+                  <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                    My Tasks
+                  </h2>
+                  <p className="text-gray-400 text-sm">Manage your daily tasks and boost productivity</p>
+                </motion.div>
+
+                {/* Error Message */}
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 rounded-lg bg-red-500/20 p-3 border border-red-500/30"
+                  >
+                    <div className="text-xs text-red-300">{error}</div>
+                  </motion.div>
+                )}
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <TaskForm onAddTask={handleAddTask} isLoading={isAddingTask} />
+                </motion.div>
+
                 {/* Tasks Section */}
-                <div className="bg-gray-900/50 backdrop-blur-lg border border-gray-800 rounded-xl p-4">
-                  <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="mb-6 text-center"
-                  >
-                    <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-                      My Tasks
-                    </h2>
-                    <p className="text-gray-400 text-sm">Manage your daily tasks and boost productivity</p>
-                  </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="mt-6"
+                >
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                    <h3 className="text-lg font-semibold text-white">Your Tasks</h3>
+                    <span className="text-gray-400 text-sm">
+                      {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+                    </span>
+                  </div>
 
-                  {/* Error Message */}
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mb-4 rounded-lg bg-red-500/20 p-3 border border-red-500/30"
-                    >
-                      <div className="text-xs text-red-300">{error}</div>
-                    </motion.div>
-                  )}
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                  >
-                    <TaskForm onAddTask={handleAddTask} isLoading={isAddingTask} />
-                  </motion.div>
-
-                  {/* Tasks Section */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="mt-6"
-                  >
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                      <h3 className="text-lg font-semibold text-white">Your Tasks</h3>
-                      <span className="text-gray-400 text-sm">
-                        {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
-                      </span>
+                  {loading ? (
+                    <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                      {[...Array(3)].map((_, index) => (
+                        <Skeleton key={index} className="h-16 w-full" />
+                      ))}
                     </div>
-
-                    {loading ? (
-                      <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                        {[...Array(3)].map((_, index) => (
-                          <Skeleton key={index} className="h-16 w-full" />
-                        ))}
-                      </div>
-                    ) : tasks.length === 0 ? (
-                      <Card className="text-center py-8">
-                        <CardContent>
-                          <div className="text-gray-400 mb-2">No tasks yet</div>
-                          <p className="text-gray-500 text-sm">Add your first task to get started</p>
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                        {tasks.map((task) => (
-                          <TaskItem
-                            key={task.id}
-                            task={task}
-                            onToggleComplete={handleToggleComplete}
-                            onDelete={handleDeleteTask}
-                            isUpdating={updatingTaskId === task.id}
-                            isDeleting={deletingTaskId === task.id}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </motion.div>
-                </div>
-
-                {/* Chat Section */}
-                <div>
-                  <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="mb-6 text-center"
-                  >
-                    <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-                      AI Task Assistant
-                    </h2>
-                    <p className="text-gray-400 text-sm">Chat with your AI assistant to manage tasks</p>
-                  </motion.div>
-
-                  <ChatInterface userId={user?.id || ''} onTaskAdded={loadTasks} />
-                </div>
+                  ) : tasks.length === 0 ? (
+                    <Card className="text-center py-8">
+                      <CardContent>
+                        <div className="text-gray-400 mb-2">No tasks yet</div>
+                        <p className="text-gray-500 text-sm">Add your first task to get started</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                      {tasks.map((task) => (
+                        <TaskItem
+                          key={task.id}
+                          task={task}
+                          onToggleComplete={handleToggleComplete}
+                          onDelete={handleDeleteTask}
+                          isUpdating={updatingTaskId === task.id}
+                          isDeleting={deletingTaskId === task.id}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
               </div>
-            </main>
-          </div>
+
+              {/* Chat Section */}
+              <div>
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="mb-6 text-center"
+                >
+                  <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                    AI Task Assistant
+                  </h2>
+                  <p className="text-gray-400 text-sm">Chat with your AI assistant to manage tasks</p>
+                </motion.div>
+
+                <ChatInterface userId={user?.id || ''} onTaskAdded={loadTasks} />
+              </div>
+            </div>
+          </main>
         </div>
       </PageTransition>
     </ProtectedRoute>

@@ -2,8 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../../../contexts/AuthContext';
+import { ProtectedRoute } from '../../../components/RouteProtector';
 
 export default function AddTaskPage() {
+  const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
@@ -23,8 +26,7 @@ export default function AddTaskPage() {
       const token = authTokenRow ? authTokenRow.split('=')[1] : null;
 
       if (!token) {
-        router.push('/login');
-        return;
+        return; // Will be handled by ProtectedRoute
       }
 
       const response = await fetch('/api/tasks', {
@@ -37,8 +39,7 @@ export default function AddTaskPage() {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
-        router.push('/login');
+        // Token expired or invalid, will be handled by ProtectedRoute
         return;
       }
 
@@ -56,41 +57,43 @@ export default function AddTaskPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-gray-800 rounded-lg shadow-lg p-6">
-          <h1 className="text-2xl font-bold text-white mb-6 text-center">Add New Task</h1>
+    <ProtectedRoute>
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-gray-800 rounded-lg shadow-lg p-6">
+            <h1 className="text-2xl font-bold text-white mb-6 text-center">Add New Task</h1>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/20 text-red-300 rounded-md">
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="mb-4 p-3 bg-red-500/20 text-red-300 rounded-md">
+                {error}
+              </div>
+            )}
 
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label htmlFor="title" className="block text-gray-300 mb-2">
-                Title
-              </label>
-              <input
-                id="title"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                placeholder="Enter task title"
-              />
-            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                <label htmlFor="title" className="block text-gray-300 mb-2">
+                  Title
+                </label>
+                <input
+                  id="title"
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  placeholder="Enter task title"
+                />
+              </div>
 
-            <button
-              type="submit"
-              className="w-full py-2 px-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md transition duration-200"
-            >
-              Add Task
-            </button>
-          </form>
+              <button
+                type="submit"
+                className="w-full py-2 px-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md transition duration-200"
+              >
+                Add Task
+              </button>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

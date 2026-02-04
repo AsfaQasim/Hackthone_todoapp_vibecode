@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -20,23 +20,21 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
+  // Redirect after render when conditions are met
+  React.useEffect(() => {
     if (!loading && !user) {
-      // User is not authenticated, redirect to login
       router.replace('/login');
     }
   }, [user, loading, router]);
 
-  // Show nothing while checking auth status
-  if (loading || (!user && !loading)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="max-w-md w-full space-y-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-200">Loading...</h2>
-          <p className="text-gray-400">Verifying your session</p>
-        </div>
-      </div>
-    );
+  // Don't render anything while loading or when redirect is needed
+  if (loading) {
+    return null; // Don't render anything while checking auth status
+  }
+
+  // If user is not authenticated after loading completes, return null (redirect will happen via useEffect)
+  if (!user) {
+    return null;
   }
 
   // User is authenticated, show the protected content
@@ -51,23 +49,21 @@ export const GuestOnlyRoute = ({ children }: GuestOnlyRouteProps) => {
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
+  // Redirect after render when conditions are met
+  React.useEffect(() => {
     if (!loading && user) {
-      // User is authenticated, redirect to dashboard
       router.replace('/dashboard');
     }
   }, [user, loading, router]);
 
-  // Show nothing while checking auth status
-  if (loading || (user && !loading)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="max-w-md w-full space-y-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-200">Loading...</h2>
-          <p className="text-gray-400">Redirecting...</p>
-        </div>
-      </div>
-    );
+  // Don't render anything while loading or when redirect is needed
+  if (loading) {
+    return null; // Don't render anything while checking auth status
+  }
+
+  // If user is authenticated after loading completes, return null (redirect will happen via useEffect)
+  if (user) {
+    return null;
   }
 
   // User is not authenticated, show the guest-only content
