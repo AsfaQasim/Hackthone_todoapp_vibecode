@@ -13,6 +13,7 @@ from src.models.base_models import User
 import os
 from dotenv import load_dotenv
 import logging
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -91,42 +92,55 @@ def get_current_user(
     db: Session = Depends(get_db)
 ):
     """Get the current user based on the JWT token."""
-    logger.info(f"Getting current user with credentials: {credentials.credentials[:15]}...")
-
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-    token_data = verify_token(credentials.credentials, credentials_exception)
-
-    user_id = token_data.user_id
-    logger.info(f"Looking up user in DB with ID: {user_id}")
-
-    # Simple direct query first
     try:
-        stmt = select(User).where(User.id == user_id)
-        user = db.exec(stmt).first()
-        logger.info(f"Found user in DB: {user is not None}")
-    except Exception as e:
-        logger.error(f"Database query error for user_id {user_id}: {e}")
-        # Fallback for UUID conversion issues if incoming string format differs
+        logger.info(f"Getting current user with credentials: {credentials.credentials[:15]}...")
+
+        credentials_exception = HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+        token_data = verify_token(credentials.credentials, credentials_exception)
+
+        user_id = token_data.user_id
+        logger.info(f"Looking up user in DB with ID: {user_id}")
+
+        # Simple direct query first
         try:
-            uuid_val = uuid.UUID(user_id)
-            stmt = select(User).where(User.id == uuid_val)
+            stmt = select(User).where(User.id == user_id)
             user = db.exec(stmt).first()
-            logger.info(f"Found user in DB with UUID conversion: {user is not None}")
-        except Exception as e2:
-            logger.error(f"UUID conversion also failed: {e2}")
-            user = None
+            logger.info(f"Found user in DB: {user is not None}")
+        except Exception as e:
+            logger.error(f"Database query error for user_id {user_id}: {e}")
+            # Fallback for UUID conversion issues if incoming string format differs
+            try:
+                uuid_val = uuid.UUID(user_id)
+                stmt = select(User).where(User.id == uuid_val)
+                user = db.exec(stmt).first()
+                logger.info(f"Found user in DB with UUID conversion: {user is not None}")
+            except Exception as e2:
+                logger.error(f"UUID conversion also failed: {e2}")
+                user = None
 
-    if user is None:
-        logger.warning(f"User not found in database: {user_id}")
+        if user is None:
+            logger.warning(f"User not found in database: {user_id}")
+            raise credentials_exception
+
+        logger.info(f"Successfully retrieved user: {user.id}")
+        return user
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in get_current_user: {e}")
+        logger.error(traceback.format_exc())
+        credentials_exception = HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
         raise credentials_exception
-
-    logger.info(f"Successfully retrieved user: {user.id}")
-    return user
 
 def validate_user_id_from_token_and_path(token_user_id: str, path_user_id: str):
     """Validate that the user_id from JWT matches the user_id in the API path."""

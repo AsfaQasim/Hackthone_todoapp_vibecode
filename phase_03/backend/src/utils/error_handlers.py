@@ -39,8 +39,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(
         status_code=422,
         content={
-            "detail": "Validation error",
-            "errors": exc.errors()
+            "success": False,
+            "error": "Validation error",
+            "details": exc.errors()
         }
     )
 
@@ -49,7 +50,11 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     logger.warning(f"HTTP error: {exc.status_code} - {exc.detail}")
     return JSONResponse(
         status_code=exc.status_code,
-        content={"detail": exc.detail}
+        content={
+            "success": False,
+            "error": exc.detail,
+            "details": f"HTTP {exc.status_code} error"
+        }
     )
 
 async def general_exception_handler(request: Request, exc: Exception):
@@ -58,5 +63,9 @@ async def general_exception_handler(request: Request, exc: Exception):
     logger.error(traceback.format_exc())
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error"}
+        content={
+            "success": False,
+            "error": "Internal server error",
+            "details": "An unexpected error occurred"
+        }
     )

@@ -11,6 +11,10 @@ from src.services.auth_service import verify_token # We might need to check wher
 
 # Pydantic models for API responses
 from pydantic import BaseModel
+import logging
+import traceback
+
+logger = logging.getLogger(__name__)
 
 class TaskCreate(BaseModel):
     title: str
@@ -56,21 +60,32 @@ def list_tasks(
     """
     List all tasks for the authenticated user
     """
-    current_user_id = get_current_user_id(request)
-    if str(current_user_id) != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You can only access your own tasks"
-        )
+    try:
+        current_user_id = get_current_user_id(request)
+        if str(current_user_id) != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You can only access your own tasks"
+            )
 
-    query = select(Task).where(Task.user_id == user_id)
-    
-    if status:
-        if status in [s.value for s in TaskStatus]:
-            query = query.where(Task.status == status)
-    
-    tasks = session.exec(query).all()
-    return tasks
+        query = select(Task).where(Task.user_id == user_id)
+
+        if status:
+            if status in [s.value for s in TaskStatus]:
+                query = query.where(Task.status == status)
+
+        tasks = session.exec(query).all()
+        return tasks
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"List tasks error: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve tasks due to an internal server error"
+        )
 
 
 @router.post("/{user_id}/tasks", response_model=TaskResponse)
@@ -83,25 +98,36 @@ def create_task(
     """
     Create a new task for the authenticated user
     """
-    current_user_id = get_current_user_id(request)
-    if str(current_user_id) != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You can only create tasks for yourself"
+    try:
+        current_user_id = get_current_user_id(request)
+        if str(current_user_id) != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You can only create tasks for yourself"
+            )
+
+        db_task = Task(
+            title=task.title,
+            description=task.description,
+            status=task.status,
+            user_id=user_id # SQLModel will handle UUID conversion if string provided
         )
 
-    db_task = Task(
-        title=task.title,
-        description=task.description,
-        status=task.status,
-        user_id=user_id # SQLModel will handle UUID conversion if string provided
-    )
+        session.add(db_task)
+        session.commit()
+        session.refresh(db_task)
 
-    session.add(db_task)
-    session.commit()
-    session.refresh(db_task)
-
-    return db_task
+        return db_task
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"Create task error: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create task due to an internal server error"
+        )
 
 
 @router.get("/{user_id}/tasks/{task_id}", response_model=TaskResponse)
@@ -114,23 +140,34 @@ def get_task(
     """
     Get a specific task by ID for the authenticated user
     """
-    current_user_id = get_current_user_id(request)
-    if str(current_user_id) != user_id:
+    try:
+        current_user_id = get_current_user_id(request)
+        if str(current_user_id) != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You can only access your own tasks"
+            )
+
+        query = select(Task).where(Task.id == task_id, Task.user_id == user_id)
+        db_task = session.exec(query).first()
+
+        if not db_task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found"
+            )
+
+        return db_task
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"Get task error: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You can only access your own tasks"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve task due to an internal server error"
         )
-
-    query = select(Task).where(Task.id == task_id, Task.user_id == user_id)
-    db_task = session.exec(query).first()
-
-    if not db_task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found"
-        )
-
-    return db_task
 
 
 @router.put("/{user_id}/tasks/{task_id}", response_model=TaskResponse)
@@ -144,33 +181,44 @@ def update_task(
     """
     Update a specific task by ID for the authenticated user
     """
-    current_user_id = get_current_user_id(request)
-    if str(current_user_id) != user_id:
+    try:
+        current_user_id = get_current_user_id(request)
+        if str(current_user_id) != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You can only update your own tasks"
+            )
+
+        query = select(Task).where(Task.id == task_id, Task.user_id == user_id)
+        db_task = session.exec(query).first()
+
+        if not db_task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found"
+            )
+
+        task_data = task_update.model_dump(exclude_unset=True)
+        for key, value in task_data.items():
+            setattr(db_task, key, value)
+
+        db_task.updated_at = datetime.utcnow()
+
+        session.add(db_task)
+        session.commit()
+        session.refresh(db_task)
+
+        return db_task
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"Update task error: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You can only update your own tasks"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update task due to an internal server error"
         )
-
-    query = select(Task).where(Task.id == task_id, Task.user_id == user_id)
-    db_task = session.exec(query).first()
-
-    if not db_task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found"
-        )
-
-    task_data = task_update.model_dump(exclude_unset=True)
-    for key, value in task_data.items():
-        setattr(db_task, key, value)
-
-    db_task.updated_at = datetime.utcnow()
-
-    session.add(db_task)
-    session.commit()
-    session.refresh(db_task)
-
-    return db_task
 
 
 @router.delete("/{user_id}/tasks/{task_id}")
@@ -183,25 +231,36 @@ def delete_task(
     """
     Delete a specific task by ID for the authenticated user
     """
-    current_user_id = get_current_user_id(request)
-    if str(current_user_id) != user_id:
+    try:
+        current_user_id = get_current_user_id(request)
+        if str(current_user_id) != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You can only delete your own tasks"
+            )
+
+        query = select(Task).where(Task.id == task_id, Task.user_id == user_id)
+        db_task = session.exec(query).first()
+
+        if not db_task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found"
+            )
+
+        session.delete(db_task)
+        session.commit()
+        return {"message": "Task deleted successfully"}
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"Delete task error: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You can only delete your own tasks"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete task due to an internal server error"
         )
-
-    query = select(Task).where(Task.id == task_id, Task.user_id == user_id)
-    db_task = session.exec(query).first()
-
-    if not db_task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found"
-        )
-
-    session.delete(db_task)
-    session.commit()
-    return {"message": "Task deleted successfully"}
 
 
 @router.patch("/{user_id}/tasks/{task_id}/complete", response_model=TaskResponse)
@@ -214,33 +273,44 @@ def toggle_task_completion(
     """
     Toggle the completion status of a specific task for the authenticated user
     """
-    current_user_id = get_current_user_id(request)
-    if str(current_user_id) != user_id:
+    try:
+        current_user_id = get_current_user_id(request)
+        if str(current_user_id) != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You can only modify your own tasks"
+            )
+
+        query = select(Task).where(Task.id == task_id, Task.user_id == user_id)
+        db_task = session.exec(query).first()
+
+        if not db_task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found"
+            )
+
+        if db_task.status == TaskStatus.COMPLETED:
+            db_task.status = TaskStatus.PENDING
+            db_task.completed_at = None
+        else:
+            db_task.status = TaskStatus.COMPLETED
+            db_task.completed_at = datetime.utcnow()
+
+        db_task.updated_at = datetime.utcnow()
+
+        session.add(db_task)
+        session.commit()
+        session.refresh(db_task)
+
+        return db_task
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"Toggle task completion error: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You can only modify your own tasks"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update task status due to an internal server error"
         )
-
-    query = select(Task).where(Task.id == task_id, Task.user_id == user_id)
-    db_task = session.exec(query).first()
-
-    if not db_task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found"
-        )
-
-    if db_task.status == TaskStatus.COMPLETED:
-        db_task.status = TaskStatus.PENDING
-        db_task.completed_at = None
-    else:
-        db_task.status = TaskStatus.COMPLETED
-        db_task.completed_at = datetime.utcnow()
-
-    db_task.updated_at = datetime.utcnow()
-
-    session.add(db_task)
-    session.commit()
-    session.refresh(db_task)
-
-    return db_task

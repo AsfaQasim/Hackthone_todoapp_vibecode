@@ -117,11 +117,27 @@ export default function ChatInterface({ userId, onTaskAdded }: ChatInterfaceProp
       }
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          // If response is not JSON, create a generic error
+          errorData = {
+            error: `HTTP ${response.status} - ${response.statusText}`,
+            details: 'Response was not in JSON format'
+          };
+        }
+
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        // Handle case where response is not JSON even though status was OK
+        throw new Error('Response was not in JSON format');
+      }
 
       // Save conversation ID to localStorage
       localStorage.setItem('conversation_id', data.conversation_id);

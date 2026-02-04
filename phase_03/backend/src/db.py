@@ -1,33 +1,23 @@
-"""Database configuration and session management."""
+"""Database utilities and session management for the AI Chatbot with MCP application."""
 
-from sqlmodel import create_engine, Session, SQLModel
-import os
 from typing import Generator
+from sqlmodel import create_engine, Session, SQLModel
+from config import settings
+import os
 
-# Get database URL from environment variable
-# Default to SQLite for local development if not set, or if set to a generic placeholder
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./todo_app_local.db")
+# Create the database engine with proper configuration
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# For Neon (serverless Postgres), we need to ensure we use the correct driver
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+if not DATABASE_URL:
+    DATABASE_URL = settings.database_url
+
+# Fix postgres scheme for SQLAlchemy
+if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-elif DATABASE_URL and "?sslmode=require" in DATABASE_URL:
-    # For PostgreSQL connections, ensure psycopg2 compatibility
-    if "postgresql://" in DATABASE_URL:
-        # Add psycopg2 driver if not present
-        if "+psycopg2" not in DATABASE_URL:
-            DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
-# Handle environment-specific configurations
-# If explicitly in development or using local SQLite
-if os.getenv("ENVIRONMENT") == "development" or "sqlite" in DATABASE_URL:
-    if "sqlite" not in DATABASE_URL:
-         DATABASE_URL = "sqlite:///./todo_app_local.db"
-
-# Create SQLModel engine
 engine = create_engine(
     DATABASE_URL,
-    echo=False,  # Set to True for debugging SQL queries
+    echo=False,
     connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
 )
 
@@ -37,5 +27,47 @@ def get_db() -> Generator[Session, None, None]:
         yield session
 
 def init_db():
-    """Initialize database tables."""
-    SQLModel.metadata.create_all(engine)
+    """Initialize the database tables."""
+    from src.models.base_models import User, Task, Conversation, Message
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        # Import all models here to ensure they're registered with SQLModel
+        SQLModel.metadata.create_all(engine)
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Error creating database tables: {e}")
+        # If there's a schema mismatch, we may need to recreate tables
+        # This is a simplified approach - in production, use Alembic for migrations
+        try:
+            from sqlalchemy import inspect
+            inspector = inspect(engine)
+            existing_tables = inspector.get_table_names()
+
+            if existing_tables:  # If there are existing tables
+                logger.warning("Existing tables found, attempting to recreate with correct schema...")
+                # Close all connections before dropping
+                engine.dispose()
+
+                # Recreate engine to ensure fresh connection
+                temp_engine = create_engine(
+                    DATABASE_URL,
+                    echo=False,
+                    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+                )
+
+                # Drop all tables and recreate
+                SQLModel.metadata.drop_all(temp_engine)
+                SQLModel.metadata.create_all(temp_engine)
+
+                # Close temp engine
+                temp_engine.dispose()
+                logger.info("Database tables recreated successfully")
+            else:
+                # If no existing tables, just try creating them again
+                SQLModel.metadata.create_all(engine)
+        except Exception as e2:
+            logger.error(f"Failed to fix database schema: {e2}")
+            raise
