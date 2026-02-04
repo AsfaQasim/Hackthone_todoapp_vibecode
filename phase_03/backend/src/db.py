@@ -11,6 +11,12 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./todo_app_local.db")
 # For Neon (serverless Postgres), we need to ensure we use the correct driver
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+elif DATABASE_URL and "?sslmode=require" in DATABASE_URL:
+    # For PostgreSQL connections, ensure psycopg2 compatibility
+    if "postgresql://" in DATABASE_URL:
+        # Add psycopg2 driver if not present
+        if "+psycopg2" not in DATABASE_URL:
+            DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 # Handle environment-specific configurations
 # If explicitly in development or using local SQLite

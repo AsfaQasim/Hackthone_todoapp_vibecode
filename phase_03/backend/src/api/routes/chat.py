@@ -46,6 +46,10 @@ async def get_authenticated_user(request: Request, db: Session = Depends(get_db)
     import re
     logger = logging.getLogger(__name__)
 
+    logger.info(f"get_authenticated_user called for path: {request.url.path}")
+    logger.info(f"Request headers: {dict(request.headers)}")
+    logger.info(f"Request state: {request.state.__dict__ if hasattr(request.state, '__dict__') else 'No state attributes'}")
+
     user = None
 
     # Helper function to validate UUID format before using it in database queries
@@ -62,6 +66,7 @@ async def get_authenticated_user(request: Request, db: Session = Depends(get_db)
     if hasattr(request.state, 'current_user') and request.state.current_user is not None:
         user_info = request.state.current_user
         user_id = getattr(user_info, 'user_id', None)
+        logger.info(f"Method 1 - Found current_user in request.state: {user_id}")
 
         if user_id and is_valid_uuid_format(str(user_id)):
             logger.info(f"Getting user from request.state.current_user: {user_id}")
@@ -75,6 +80,7 @@ async def get_authenticated_user(request: Request, db: Session = Depends(get_db)
 
             try:
                 user = db.query(User).filter(User.id == normalized_user_id).first()
+                logger.info(f"Database lookup result for current_user: {user is not None}")
             except Exception as e:
                 logger.warning(f"Database query failed for user_id {normalized_user_id}: {e}")
                 # Continue to next method if database query fails
@@ -85,6 +91,7 @@ async def get_authenticated_user(request: Request, db: Session = Depends(get_db)
     if not user and hasattr(request.state, 'user') and request.state.user is not None:
         user_info = request.state.user
         user_id = user_info.get('user_id') if isinstance(user_info, dict) else getattr(user_info, 'user_id', None)
+        logger.info(f"Method 2 - Found user in request.state.user: {user_id}")
 
         if user_id and is_valid_uuid_format(str(user_id)):
             logger.info(f"Getting user from request.state.user: {user_id}")
@@ -97,6 +104,7 @@ async def get_authenticated_user(request: Request, db: Session = Depends(get_db)
 
             try:
                 user = db.query(User).filter(User.id == normalized_user_id).first()
+                logger.info(f"Database lookup result for state.user: {user is not None}")
             except Exception as e:
                 logger.warning(f"Database query failed for user_id {normalized_user_id}: {e}")
         else:
@@ -105,9 +113,13 @@ async def get_authenticated_user(request: Request, db: Session = Depends(get_db)
     # Method 3: Extract from Authorization header directly if verification fails
     if not user:
         auth_header = request.headers.get("Authorization")
+        logger.info(f"Method 3 - Checking Authorization header: {auth_header}")
+
         if auth_header:
             # Remove "Bearer " prefix if present
             token = auth_header.replace("Bearer ", "").strip()
+            logger.info(f"Extracted token from header: {token[:15]}...")
+
             try:
                 # Try to decode token without verification to extract user info
                 import jwt
@@ -115,6 +127,7 @@ async def get_authenticated_user(request: Request, db: Session = Depends(get_db)
 
                 # Decode without verification to get payload
                 payload = jwt.decode(token, options={"verify_signature": False}, algorithms=[ALGORITHM])
+                logger.info(f"Decoded token payload (unverified): {payload}")
 
                 user_id = payload.get("sub") or payload.get("userId") or payload.get("user_id")
                 if user_id and is_valid_uuid_format(str(user_id)):
@@ -127,6 +140,7 @@ async def get_authenticated_user(request: Request, db: Session = Depends(get_db)
 
                     try:
                         user = db.query(User).filter(User.id == normalized_user_id).first()
+                        logger.info(f"Database lookup result for token user_id: {user is not None}")
                     except Exception as e:
                         logger.warning(f"Database query failed for user_id {normalized_user_id}: {e}")
             except Exception as e:
@@ -139,6 +153,7 @@ async def get_authenticated_user(request: Request, db: Session = Depends(get_db)
         # Path format is /api/{user_id}/chat
         if len(path_parts) >= 3 and path_parts[-1] == 'chat':
             path_user_id = path_parts[-2]  # The user_id is second to last
+            logger.info(f"Method 4 - Extracted path_user_id: {path_user_id}")
 
             if path_user_id and is_valid_uuid_format(str(path_user_id)):
                 logger.info(f"Extracting user_id from URL path: {path_user_id}")
@@ -151,6 +166,7 @@ async def get_authenticated_user(request: Request, db: Session = Depends(get_db)
 
                 try:
                     user = db.query(User).filter(User.id == normalized_user_id).first()
+                    logger.info(f"Database lookup result for path user_id: {user is not None}")
                 except Exception as e:
                     logger.warning(f"Database query failed for path user_id {normalized_user_id}: {e}")
             else:
@@ -199,6 +215,9 @@ async def chat(
     from src.db import SessionLocal
 
     logger = logging.getLogger(__name__)
+
+    logger.info(f"Chat endpoint called with user_id: {user_id}")
+    logger.info(f"Current user from dependency: {getattr(current_user, 'id', 'NO_USER_FOUND')}")
 
     # Initialize default response values
     conversation_id = str(uuid.uuid4())  # Generate a default conversation ID
@@ -256,6 +275,7 @@ async def chat(
         try:
             # Only attempt database operations if we have valid UUIDs
             if is_valid_uuid_format(user_id) and is_valid_uuid_format(str(current_user.id)):
+                logger.info("Attempting database operations with valid UUIDs")
                 db = SessionLocal()
 
                 # Get or create conversation
@@ -299,6 +319,7 @@ async def chat(
                 except Exception as e:
                     logger.error(f"Failed to store assistant message: {e}. Continuing anyway.")
             else:
+                logger.info(f"Skipping database operations - path UUID valid: {is_valid_uuid_format(user_id)}, current user UUID valid: {is_valid_uuid_format(str(current_user.id))}")
                 # If UUIDs are invalid, skip database operations and generate response directly
                 logger.info("Skipping database operations due to invalid UUIDs")
                 try:
@@ -343,4 +364,5 @@ async def chat(
     if not is_valid_uuid_format(user_id) or not is_valid_uuid_format(str(current_user.id)):
         response["note"] = "UUID error bypassed"
 
+    logger.info(f"Returning response: {response}")
     return response

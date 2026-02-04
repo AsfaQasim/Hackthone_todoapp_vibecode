@@ -13,9 +13,13 @@ async function fetchWithAuth(url: string, options: RequestOptions = {}) {
   if (options.requiresAuth !== false) {
     // Get the JWT token from auth client
     const token = authClient.getJwt();
+    console.log("[API] URL:", `${API_BASE_URL}${url}`);
+    console.log("[API] Token:", token);
 
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
+    } else {
+      console.warn("[API] No token found for this request!");
     }
   }
 
@@ -24,16 +28,21 @@ async function fetchWithAuth(url: string, options: RequestOptions = {}) {
     headers,
   });
 
+  console.log("[API] Response status:", response.status);
+
   if (!response.ok) {
-    throw new Error(`API Error: ${response.statusText}`);
+    const errorBody = await response.text();
+    console.error("[API] Error body:", errorBody);
+    throw new Error(`API Error: ${response.status} - ${response.statusText}`);
   }
 
-  // Handle empty responses (like 204 No Content)
   if (response.status === 204) {
     return null;
   }
 
-  return response.json();
+  const json = await response.json();
+  console.log("[API] Response JSON:", json);
+  return json;
 }
 
 export const api = {
