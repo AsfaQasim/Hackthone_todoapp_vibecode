@@ -1,115 +1,70 @@
-"""Database models for the AI Chatbot with MCP application."""
+"""Database models for the AI Chatbot with MCP application using SQLModel."""
 
-import uuid
+from typing import Optional, List
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Enum
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
-from sqlalchemy.types import TypeDecorator, CHAR
-from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
-import platform
+import uuid
+from sqlmodel import SQLModel, Field, Relationship
+from enum import Enum
 
-Base = declarative_base()
+class TaskStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
 
-# Custom UUID type that works with both PostgreSQL and SQLite
-class GUID(TypeDecorator):
-    """Platform-independent GUID type.
-    Uses PostgreSQL's UUID type, otherwise uses CHAR(32), storing as stringified hex values.
-    """
-    impl = CHAR
-    cache_ok = True
+class MessageRole(str, Enum):
+    USER = "user"
+    ASSISTANT = "assistant"
 
-    def __init__(self):
-        super(GUID, self).__init__(length=32)
+class UserBase(SQLModel):
+    email: str = Field(unique=True, index=True)
+    name: str
 
-    def load_dialect_impl(self, dialect):
-        if dialect.name == 'postgresql':
-            return dialect.type_descriptor(PostgresUUID())
-        else:
-            return dialect.type_descriptor(CHAR(length=32))
-
-    def process_bind_param(self, value, dialect):
-        if value is None:
-            return value
-        elif dialect.name == 'postgresql':
-            return str(value)
-        else:
-            if not isinstance(value, uuid.UUID):
-                return "%.32x" % uuid.UUID(value).int
-            else:
-                # hexstring
-                return "%.32x" % value.int
-
-    def process_result_value(self, value, dialect):
-        if value is None:
-            return value
-        else:
-            if not isinstance(value, uuid.UUID):
-                value = "%s-%s-%s-%s-%s" % (value[:8], value[8:12], value[12:16], value[16:20], value[20:])
-            return uuid.UUID(value)
-
-
-class User(Base):
-    """User model representing application users."""
-
+class User(UserBase, table=True):
     __tablename__ = "users"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    email = Column(String(255), unique=True, nullable=False)
-    name = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    tasks: List["Task"] = Relationship(back_populates="user")
+    conversations: List["Conversation"] = Relationship(back_populates="user")
 
-    # Relationships
-    tasks = relationship("Task", back_populates="user", cascade="all, delete-orphan")
-    conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
+class TaskBase(SQLModel):
+    title: str
+    description: Optional[str] = None
+    status: TaskStatus = Field(default=TaskStatus.PENDING)
 
-
-class Task(Base):
-    """Task model representing user tasks."""
-
+class Task(TaskBase, table=True):
     __tablename__ = "tasks"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="users.id")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = None
 
-    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    title = Column(String(255), nullable=False)
-    description = Column(Text, nullable=True)
-    status = Column(Enum('pending', 'in_progress', 'completed', name='task_status'), default='pending')
-    user_id = Column(GUID(), ForeignKey('users.id'), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    completed_at = Column(DateTime, nullable=True)
+    user: User = Relationship(back_populates="tasks")
 
-    # Relationship
-    user = relationship("User", back_populates="tasks")
+class ConversationBase(SQLModel):
+    title: Optional[str] = None
 
-
-class Conversation(Base):
-    """Conversation model representing chat conversations."""
-
+class Conversation(ConversationBase, table=True):
     __tablename__ = "conversations"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="users.id")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    user_id = Column(GUID(), ForeignKey('users.id'), nullable=False)
-    title = Column(String(255), nullable=True)  # Derived from first message or AI
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    user: User = Relationship(back_populates="conversations")
+    messages: List["Message"] = Relationship(back_populates="conversation")
 
-    # Relationships
-    user = relationship("User", back_populates="conversations")
-    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
+class MessageBase(SQLModel):
+    role: MessageRole
+    content: str
+    metadata_json: Optional[str] = None
 
-
-class Message(Base):
-    """Message model representing individual messages in a conversation."""
-
+class Message(MessageBase, table=True):
     __tablename__ = "messages"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    conversation_id: uuid.UUID = Field(foreign_key="conversations.id")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
-    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    conversation_id = Column(GUID(), ForeignKey('conversations.id'), nullable=False)
-    role = Column(Enum('user', 'assistant', name='message_role'), nullable=False)  # 'user' or 'assistant'
-    content = Column(Text, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow)
-    metadata_json = Column(Text, nullable=True)  # For tool calls and responses (stored as JSON string)
-
-    # Relationship
-    conversation = relationship("Conversation", back_populates="messages")
+    conversation: Conversation = Relationship(back_populates="messages")

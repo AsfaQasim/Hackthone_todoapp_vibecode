@@ -1,40 +1,35 @@
 """Database configuration and session management."""
 
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import QueuePool
+from sqlmodel import create_engine, Session, SQLModel
 import os
+from typing import Generator
 
 # Get database URL from environment variable
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:password@localhost/dbname")
+# Default to SQLite for local development if not set, or if set to a generic placeholder
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./todo_app_local.db")
 
-# Handle environment-specific configurations here
-if not os.getenv("ENVIRONMENT") or os.getenv("ENVIRONMENT") == "development":
-    # Check if it's the default PostgreSQL URL or the production Neon URL
-    if "neon.tech" in DATABASE_URL or "postgresql" in DATABASE_URL:
-        DATABASE_URL = "sqlite:///./todo_app_local.db"
+# For Neon (serverless Postgres), we need to ensure we use the correct driver
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# For synchronous operations (needed for Alembic migrations)
-SYNC_DATABASE_URL = DATABASE_URL.replace("+asyncpg", "") if "+asyncpg" in DATABASE_URL else DATABASE_URL
+# Handle environment-specific configurations
+# If explicitly in development or using local SQLite
+if os.getenv("ENVIRONMENT") == "development" or "sqlite" in DATABASE_URL:
+    if "sqlite" not in DATABASE_URL:
+         DATABASE_URL = "sqlite:///./todo_app_local.db"
 
+# Create SQLModel engine
 engine = create_engine(
-    SYNC_DATABASE_URL,
-    poolclass=QueuePool,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,
-    pool_recycle=300,
+    DATABASE_URL,
+    echo=False,  # Set to True for debugging SQL queries
+    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
 )
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base = declarative_base()
-
-def get_db():
+def get_db() -> Generator[Session, None, None]:
     """Dependency to get database session."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    with Session(engine) as session:
+        yield session
+
+def init_db():
+    """Initialize database tables."""
+    SQLModel.metadata.create_all(engine)

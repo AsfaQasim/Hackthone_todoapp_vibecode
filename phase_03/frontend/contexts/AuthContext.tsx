@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { authClient, signIn as signInFn, signUp as signUpFn } from '../lib/auth-client';
 
 interface User {
   id: string;
@@ -23,183 +24,198 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Helper function to decode JWT token and extract user info
+const decodeToken = (token: string): { sub: string; email: string; name?: string } | null => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return {
+      sub: payload.sub || '',
+      email: payload.email || '',
+      name: payload.name || payload.email?.split('@')[0] || ''
+    };
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return null;
+  }
+};
+
+// Helper function to get token from cookies
+const getTokenFromCookies = (): string | null => {
+  if (typeof window !== 'undefined') {
+    const cookies = document.cookie.split('; ');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.startsWith('auth_token=')) {
+        return cookie.substring('auth_token='.length);
+      }
+    }
+  }
+  return null;
+};
+
+// Helper function to remove token from cookies
+const removeTokenFromCookies = (): void => {
+  if (typeof window !== 'undefined') {
+    document.cookie = 'auth_token=; Max-Age=0; path=/; domain=' + window.location.hostname + ';';
+    // Also try without domain for localhost
+    document.cookie = 'auth_token=; Max-Age=0; path=/;';
+  }
+};
+
+// Helper function to save token to cookies
+const saveTokenToCookies = (token: string): void => {
+  if (typeof window !== 'undefined') {
+    // Set the cookie with a 7-day expiration
+    const expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + 7);
+
+    document.cookie = `auth_token=${token}; expires=${expirationDate.toUTCString()}; path=/; SameSite=Strict`;
+  }
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check for existing session on initial load
+  // Initialize auth state on component mount
   useEffect(() => {
-    const checkExistingSession = async () => {
-      console.log('Checking existing session...'); // Debug log
+    const initAuthState = () => {
       try {
-        // Make an API call to verify the session
-        // This works even with httpOnly cookies since the request includes them automatically
-        const response = await fetch('/api/session', {
-          method: 'GET',
-          credentials: 'include', // Include cookies in the request
-        });
+        // Get token from cookies
+        const token = getTokenFromCookies();
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Session verified:', data); // Debug log
+        if (token) {
+          // Decode token to get user info
+          const decoded = decodeToken(token);
 
-          // Create user object from the session data
-          const userInfo: User = {
-            id: data.user.id || 'unknown',
-            email: data.user.email || 'unknown@example.com',
-            name: data.user.name,
-          };
-
-          setUser(userInfo);
-        } else {
-          console.log('No active session found'); // Debug log
+          if (decoded) {
+            setUser({
+              id: decoded.sub,
+              email: decoded.email,
+              name: decoded.name
+            });
+          } else {
+            // Token is invalid, remove it
+            removeTokenFromCookies();
+          }
         }
       } catch (error) {
-        console.error('Error checking existing session:', error);
+        console.error('Error initializing auth state:', error);
+        // Clear any potentially corrupted token
+        removeTokenFromCookies();
       } finally {
-        console.log('Setting loading to false'); // Debug log
-        // Always set loading to false after checking session
         setLoading(false);
       }
     };
 
-    checkExistingSession();
-  }, []); // Empty dependency array to run only once on mount
+    // Use setTimeout to defer initialization to avoid hydration issues
+    const timer = setTimeout(initAuthState, 0);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    console.log('Starting login process...'); // Debug log
     try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      console.log('Attempting login with email:', email);
 
-      // The API route sets the cookie automatically, so we don't need to manually set it
-      const data = await response.json();
-      console.log('Login response:', response.status, data); // Debug log
+      // Call the login API
+      const result = await signInFn({ email, password });
+      console.log('Login API result:', result);
 
-      if (response.ok) {
-        // Decode token to get user info
-        // Get the token from the response for user info, but rely on cookie for auth state
-        if (data.token) {
-          const tokenParts = data.token.split('.');
-          if (tokenParts.length === 3) {
-            try {
-              let base64Payload = tokenParts[1];
-              while (base64Payload.length % 4) {
-                base64Payload += '=';
-              }
-              const payload = JSON.parse(atob(base64Payload));
-              console.log('Login - decoded payload:', payload); // Debug log
+      if (result.error) {
+        console.error('Login API error:', result.error.message);
+        return false;
+      }
 
-              const userInfo: User = {
-                id: payload.sub || payload.userId || payload.user_id || payload.id || 'unknown',
-                email: payload.email || email,
-                name: payload.name || payload.full_name,
-              };
+      // Check if we received a token in the response
+      if (result.data && result.data.access_token) {
+        // Save the token to cookies
+        saveTokenToCookies(result.data.access_token);
 
-              setUser(userInfo);
-              return true;
-            } catch (e) {
-              console.error('Error decoding token:', e);
-              // Create a minimal user object if token decoding fails
-              setUser({
-                id: 'unknown',
-                email: email,
-              });
-              return true;
-            }
-          }
+        // Decode the token to get user info
+        const decoded = decodeToken(result.data.access_token);
+
+        if (decoded) {
+          // Set user state immediately
+          setUser({
+            id: decoded.sub,
+            email: decoded.email,
+            name: decoded.name
+          });
+
+          console.log('Login successful, user set:', decoded);
+          return true;
+        } else {
+          console.error('Could not decode token after login');
+          return false;
         }
-        // If no token in response but request was successful,
-        // the cookie was set and we can still return true
-        return true;
       } else {
-        console.error('Login failed:', data.error || 'Unknown error');
+        console.error('No access_token in login response');
         return false;
       }
     } catch (error) {
-      console.error('Network error during login:', error);
+      console.error('Login exception:', error);
       return false;
     }
   };
 
   const signup = async (email: string, password: string, name?: string): Promise<boolean> => {
-    console.log('Starting signup process...'); // Debug log
     try {
-      const response = await fetch('/api/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password, name }),
+      console.log('Attempting signup with email:', email);
+
+      const result = await signUpFn({
+        email,
+        password,
+        name: name || email.split('@')[0],
       });
+      console.log('Signup API result:', result);
 
-      // The API route sets the cookie automatically after successful signup
-      const data = await response.json();
-      console.log('Signup response:', response.status, data); // Debug log
+      if (result.error) {
+        console.error('Signup API error:', result.error.message);
+        return false;
+      }
 
-      if (response.ok) {
-        // Decode token to get user info
-        if (data.token) {
-          const tokenParts = data.token.split('.');
-          if (tokenParts.length === 3) {
-            try {
-              let base64Payload = tokenParts[1];
-              while (base64Payload.length % 4) {
-                base64Payload += '=';
-              }
-              const payload = JSON.parse(atob(base64Payload));
-              console.log('Signup - decoded payload:', payload); // Debug log
+      // Check if we received a token in the response
+      if (result.data && result.data.access_token) {
+        // Save the token to cookies
+        saveTokenToCookies(result.data.access_token);
 
-              const userInfo: User = {
-                id: payload.sub || payload.userId || payload.user_id || payload.id || 'unknown',
-                email: payload.email || email,
-                name: payload.name || payload.full_name || name,
-              };
+        // Decode the token to get user info
+        const decoded = decodeToken(result.data.access_token);
 
-              setUser(userInfo);
-              return true;
-            } catch (e) {
-              console.error('Error decoding token:', e);
-              // Create a minimal user object if token decoding fails
-              setUser({
-                id: 'unknown',
-                email: email,
-                name: name,
-              });
-              return true;
-            }
-          }
+        if (decoded) {
+          // Set user state immediately
+          setUser({
+            id: decoded.sub,
+            email: decoded.email,
+            name: decoded.name
+          });
+
+          return true;
+        } else {
+          console.error('Could not decode token after signup');
+          return false;
         }
-        // If no token in response but request was successful,
-        // the cookie was set and we can still return true
-        return true;
       } else {
-        console.error('Signup failed:', data.error || 'Unknown error');
+        console.error('No access_token in signup response');
         return false;
       }
     } catch (error) {
-      console.error('Network error during signup:', error);
+      console.error('Signup exception:', error);
       return false;
     }
   };
 
   const logout = () => {
-    // Remove the auth token from cookies
-    document.cookie = 'auth_token=; Max-Age=0; path=/; domain=; secure=false; samesite=lax';
+    // Remove token from cookies
+    removeTokenFromCookies();
 
-    // Clear any user data from localStorage
-    localStorage.removeItem('user_info');
-
+    // Clear user state
     setUser(null);
   };
 
   const isAuthenticated = (): boolean => {
-    return !!user;
+    return !!user && !loading;
   };
 
   return (

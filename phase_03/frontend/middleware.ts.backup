@@ -25,11 +25,8 @@ export function middleware(request: NextRequest) {
   }
 
   // Get the session cookie to check authentication status
-  // Our auth system sets a cookie named 'auth_token'
-  const authCookie = request.cookies.get('auth_token') ||
-                     request.cookies.get('__Secure-authjs.session-token') ||
-                     request.cookies.get('authjs.session-token') ||
-                     request.cookies.get('better-auth.session_token');
+  // Better Auth typically uses a specific cookie name
+  const authCookie = request.cookies.get('better-auth.session_token');
 
   // If it's a protected route and user is not authenticated, redirect to login
   if (isProtectedRoute && !authCookie) {

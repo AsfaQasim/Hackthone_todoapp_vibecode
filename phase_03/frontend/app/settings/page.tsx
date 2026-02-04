@@ -7,25 +7,40 @@ import Sidebar from '../../components/Sidebar';
 import { Card, CardContent } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import PageTransition from '../../components/PageTransition';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function SettingsPage() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user, loading, isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [theme, setTheme] = useState('dark');
+  const [checkedAuth, setCheckedAuth] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is logged in by checking for auth token in cookies
-    const tokenExists = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('auth_token='));
-
-    if (!tokenExists) {
-      router.push('/login');
-    } else {
-      setIsLoggedIn(true);
+    // Check authentication status after initial loading
+    if (!loading) {
+      if (!isAuthenticated()) {
+        // Redirect to login if not authenticated
+        router.push('/login');
+        router.refresh();
+      } else {
+        // Auth is confirmed, allow rendering
+        setCheckedAuth(true);
+      }
     }
-  }, [router]);
+  }, [user, loading, isAuthenticated, router]);
+
+  // Show loading state while checking auth
+  if (loading || !checkedAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="max-w-md w-full space-y-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-200">Loading...</h2>
+          <p className="text-gray-400">Verifying your session</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSaveSettings = () => {
     // In a real app, you would save settings to the backend

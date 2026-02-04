@@ -13,7 +13,8 @@ class JWTHandler:
 
     def __init__(self):
         # Use the same secret key as Better Auth for compatibility
-        self.SECRET_KEY = os.getenv("BETTER_AUTH_SECRET")
+        # Use the same secret as the auth service for consistency
+        self.SECRET_KEY = os.getenv("BETTER_AUTH_SECRET", "your-secret-key-change-in-production")
         if not self.SECRET_KEY:
             raise RuntimeError(
                 "BETTER_AUTH_SECRET environment variable is not set.\n"
@@ -42,9 +43,10 @@ class JWTHandler:
         try:
             payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
 
-            # Extract required fields - Better Auth standard prioritizes 'sub' claim for user_id
-            # Ensure 'sub' claim from Better Auth is correctly mapped to user_id
-            user_id: str = payload.get("sub")  # Better Auth uses 'sub' as the primary identifier
+            # Extract required fields - Support multiple possible field names for compatibility
+            # Try multiple possible field names for user_id
+            user_id: str = payload.get("sub") or payload.get("userId") or payload.get("user_id")
+            # Try multiple possible field names for email
             email: str = payload.get("email") or payload.get("user_email") or payload.get("sub_email")
             exp_timestamp: int = payload.get("exp")
 

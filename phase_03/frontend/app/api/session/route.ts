@@ -1,43 +1,38 @@
+import { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import jwt from 'jsonwebtoken';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    // Get the auth token from cookies using next/headers
-    const authCookie = cookies().get('auth_token');
+    // Get the authorization header or session token from cookies
+    const authHeader = request.headers.get('authorization');
+    const cookieHeader = request.headers.get('cookie');
 
-    if (!authCookie) {
-      return NextResponse.json({ error: 'No authentication token found' }, { status: 401 });
-    }
+    // Forward the request to the backend
+    const backendResponse = await fetch('http://localhost:8000/session', {
+      method: 'GET',
+      headers: {
+        'authorization': authHeader || '',
+        'cookie': cookieHeader || '',
+      },
+    });
 
-    const token = authCookie.value;
-    
-    // Verify the JWT token
-    try {
-      const decoded = jwt.verify(
-        token,
-        process.env.BETTER_AUTH_SECRET || process.env.JWT_SECRET || 'fallback_secret'
-      ) as any;
-      
-      // Return user information from the token
-      return NextResponse.json({
-        user: {
-          id: decoded.userId || decoded.sub || decoded.user_id || decoded.id || 'unknown',
-          email: decoded.email || 'unknown@example.com',
-          name: decoded.name || decoded.full_name,
-        },
-        session: {
-          valid: true,
-          exp: decoded.exp,
-        }
-      });
-    } catch (verificationError) {
-      console.error('Token verification failed:', verificationError);
-      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    const responseData = await backendResponse.json();
+
+    if (backendResponse.ok) {
+      // If session retrieval successful, return the session data
+      return NextResponse.json(responseData);
+    } else {
+      // If session retrieval failed, return the error
+      return NextResponse.json(
+        { error: responseData.detail || 'Session retrieval failed' },
+        { status: backendResponse.status }
+      );
     }
   } catch (error) {
-    console.error('Session check error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Session proxy error:', error);
+    return NextResponse.json(
+      { error: 'Unable to connect to session service' },
+      { status: 500 }
+    );
   }
 }

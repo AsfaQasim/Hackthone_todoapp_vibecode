@@ -7,7 +7,7 @@ import uuid
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlmodel import Session, select
 from src.db import get_db
 from src.models.base_models import User
 import os
@@ -81,23 +81,23 @@ def get_current_user(
 
     token_data = verify_token(credentials.credentials, credentials_exception)
 
-    # Handle UUID format differences (canonical vs hex string)
     user_id = token_data.user_id
-    user = db.query(User).filter(User.id == user_id).first()
+    
+    # Simple direct query first
+    try:
+        stmt = select(User).where(User.id == user_id)
+        user = db.exec(stmt).first()
+    except Exception:
+         # Fallback for UUID conversion issues if incoming string format differs
+         try:
+             uuid_val = uuid.UUID(user_id)
+             stmt = select(User).where(User.id == uuid_val)
+             user = db.exec(stmt).first()
+         except Exception:
+             user = None
 
     if user is None:
-        # If not found, try converting UUID with dashes to hex string (without dashes)
-        # This handles the case where the database stores UUIDs as hex strings (CHAR(32))
-        try:
-            uuid_obj = uuid.UUID(user_id)
-            hex_uuid = uuid_obj.hex  # Convert to hex string without dashes
-            user = db.query(User).filter(User.id == hex_uuid).first()
-        except (ValueError, AttributeError, TypeError):
-            # If conversion fails, continue to raise exception
-            pass
-
-        if user is None:
-            raise credentials_exception
+        raise credentials_exception
 
     return user
 

@@ -5,8 +5,8 @@ from typing import Dict, Any, List, Optional
 from openai import OpenAI
 from src.config import settings
 from src.services.mcp_tool_service import mcp_tool_service, MCPToolResult
-from src.models.user import User
-from sqlalchemy.orm import Session
+from src.models.base_models import User
+from sqlmodel import Session
 
 
 class ChatAgent:

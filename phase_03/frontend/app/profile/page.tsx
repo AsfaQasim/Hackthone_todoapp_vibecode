@@ -7,40 +7,34 @@ import Sidebar from '../../components/Sidebar';
 import { Card, CardContent } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import PageTransition from '../../components/PageTransition';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function ProfilePage() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const { user, loading, isAuthenticated } = useAuth();
   const router = useRouter();
+  const [checkedAuth, setCheckedAuth] = useState(false);
 
   useEffect(() => {
-    // Check if user is logged in by checking for auth token in cookies
-    const tokenExists = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('auth_token='));
-
-    if (!tokenExists) {
-      router.push('/login');
-    } else {
-      setIsLoggedIn(true);
-      // In a real app, you would fetch user details here
-      // For now, we'll just set a mock user
-      setUser({ email: 'user@example.com', name: 'John Doe' });
+    // Check authentication status after initial loading
+    if (!loading) {
+      if (!isAuthenticated()) {
+        // Redirect to login if not authenticated
+        router.push('/login');
+        router.refresh();
+      } else {
+        // Auth is confirmed, allow rendering
+        setCheckedAuth(true);
+      }
     }
-  }, [router]);
+  }, [user, loading, isAuthenticated, router]);
 
-  if (!isLoggedIn) {
+  // Show loading state while checking auth
+  if (loading || !checkedAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="max-w-md w-full space-y-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-200">Please log in</h2>
-          <p className="text-gray-400">You need to be logged in to access your profile</p>
-          <Button
-            onClick={() => router.push('/login')}
-            variant="primary"
-          >
-            Go to Login
-          </Button>
+          <h2 className="text-2xl font-bold text-gray-200">Loading...</h2>
+          <p className="text-gray-400">Verifying your session</p>
         </div>
       </div>
     );
@@ -76,7 +70,7 @@ export default function ProfilePage() {
                     <div className="flex items-center mb-6">
                       <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16" />
                       <div className="ml-4">
-                        <h2 className="text-xl font-semibold text-white">{user?.name || 'User'}</h2>
+                        <h2 className="text-xl font-semibold text-white">{user?.name || user?.email?.split('@')[0] || 'User'}</h2>
                         <p className="text-gray-400">{user?.email || 'Email not available'}</p>
                       </div>
                     </div>
@@ -96,7 +90,7 @@ export default function ProfilePage() {
                         <label className="block text-sm font-medium text-gray-300 mb-1">Name</label>
                         <input
                           type="text"
-                          value={user?.name || ''}
+                          value={user?.name || user?.email?.split('@')[0] || ''}
                           readOnly
                           className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white"
                         />

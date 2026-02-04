@@ -1,89 +1,67 @@
-import { NextResponse } from 'next/server';
-import { findUserByEmail } from '../../../lib/db/models';
-import { initializeDatabase } from '../../../lib/db';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import { NextRequest, NextResponse } from 'next/server';
 
-let dbInitialized = false;
-
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    // Initialize database if not already done
-    if (!dbInitialized) {
-      await initializeDatabase();
-      dbInitialized = true;
-    }
-
     const body = await request.json();
-    console.log('Login request body:', body); // Debug log
 
-    const { email, password } = body;
-
-    // Basic validation
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: 'Email and password are required' },
-        { status: 400 }
-      );
-    }
-
-    // Normalize email to lowercase
-    const normalizedEmail = email.toLowerCase();
-
-    // Find user by email
-    const user = await findUserByEmail(normalizedEmail);
-    if (!user) {
-      console.log('User not found for email:', normalizedEmail); // Debug log
-      return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
-      );
-    }
-
-    // Compare password with hashed password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    console.log('Password comparison result:', isPasswordValid); // Debug log
-
-    if (!isPasswordValid) {
-      console.log('Invalid password for user:', normalizedEmail); // Debug log
-      return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
-      );
-    }
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      process.env.BETTER_AUTH_SECRET || process.env.JWT_SECRET || 'fallback_secret',
-      { expiresIn: '24h' }
-    );
-
-    console.log('Generated token for user:', user.id); // Debug log
-
-    // Create response with token in cookie
-    const response = NextResponse.json({
-      message: 'Login successful',
-      user: { id: user.id, email: user.email },
-      token, // Include the token in the response for compatibility
+    const backendResponse = await fetch('http://localhost:8000/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      // Important: forward incoming cookies if needed (e.g. refresh token)
+      credentials: 'include', // usually not needed for server→server, but harmless
     });
 
-    // Set HTTP-only cookie with the token
-    response.cookies.set('auth_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-      maxAge: 60 * 60 * 24, // 24 hours
-      sameSite: 'lax', // CSRF protection
-      path: '/', // Cookie is available for the entire site
+    // Read body once (can only be read once)
+    const responseData = await backendResponse.json();
+
+    // Create our response with the same status
+    const response = NextResponse.json(responseData, {
+      status: backendResponse.status,
     });
 
-    console.log('Set auth_token cookie'); // Debug log
+    // ────────────────────────────────────────────────
+    // Critical: Forward ALL Set-Cookie headers from backend
+    const setCookieHeaders = backendResponse.headers.getSetCookie?.() || 
+                             backendResponse.headers.get('set-cookie');
+
+    if (setCookieHeaders) {
+      // getSetCookie() returns string[], plain 'set-cookie' may be string
+      const cookiesArray = Array.isArray(setCookieHeaders) 
+        ? setCookieHeaders 
+        : [setCookieHeaders];
+
+      for (const cookieStr of cookiesArray) {
+        // Parse basic name=value (you can improve parsing if needed)
+        const [nameValue] = cookieStr.split(';');
+        const [name, value] = nameValue.split('=').map(s => s.trim());
+
+        if (name && value) {
+          response.cookies.set(name, value, {
+            // You can parse other attributes (path, httpOnly, etc.) if needed
+            // For now we let backend control most options
+            path: '/',
+            httpOnly: cookieStr.includes('HttpOnly'),
+            secure: cookieStr.includes('Secure') || process.env.NODE_ENV === 'production',
+            sameSite: cookieStr.includes('SameSite=Strict') ? 'strict' :
+                     cookieStr.includes('SameSite=Lax')   ? 'lax'   : 'none',
+            // maxAge / expires would need more parsing if you want exact match
+          });
+        } else {
+          // Fallback: set raw string if parsing fails (less safe)
+          response.headers.append('Set-Cookie', cookieStr);
+        }
+      }
+    }
 
     return response;
+
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Login proxy error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Unable to connect to authentication service' },
       { status: 500 }
     );
   }

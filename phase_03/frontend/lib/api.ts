@@ -1,21 +1,49 @@
-export async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  // Get the auth token from cookies
-  const cookies = document.cookie.split('; ');
-  const authTokenRow = cookies.find(row => row.startsWith('auth_token='));
-  const token = authTokenRow ? authTokenRow.split('=')[1] : null;
-  
-  const response = await fetch(endpoint, {
+import { authClient } from "./auth-client";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+
+type RequestOptions = RequestInit & {
+  requiresAuth?: boolean;
+};
+
+async function fetchWithAuth(url: string, options: RequestOptions = {}) {
+  const headers = new Headers(options.headers);
+  headers.set("Content-Type", "application/json");
+
+  if (options.requiresAuth !== false) {
+    // Get the JWT token from auth client
+    const token = authClient.getJwt();
+
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  }
+
+  const response = await fetch(`${API_BASE_URL}${url}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-    },
+    headers,
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    throw new Error(`API Error: ${response.statusText}`);
+  }
+
+  // Handle empty responses (like 204 No Content)
+  if (response.status === 204) {
+    return null;
   }
 
   return response.json();
 }
+
+export const api = {
+  getTasks: (userId: string) => fetchWithAuth(`/${userId}/tasks`),
+  createTask: (userId: string, task: { title: string; description?: string }) =>
+    fetchWithAuth(`/${userId}/tasks`, { method: "POST", body: JSON.stringify(task) }),
+  updateTask: (userId: string, taskId: string, task: Partial<{ title: string; description: string; status: string }>) =>
+    fetchWithAuth(`/${userId}/tasks/${taskId}`, { method: "PUT", body: JSON.stringify(task) }),
+  deleteTask: (userId: string, taskId: string) =>
+    fetchWithAuth(`/${userId}/tasks/${taskId}`, { method: "DELETE" }),
+  toggleTaskCompletion: (userId: string, taskId: string) =>
+    fetchWithAuth(`/${userId}/tasks/${taskId}/complete`, { method: "PATCH" }),
+};

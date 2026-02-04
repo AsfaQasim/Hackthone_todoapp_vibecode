@@ -31,8 +31,8 @@ export default function AuthComponent({ onAuthSuccess }: AuthFormProps) {
         if (result?.error) {
           setError(result.error.message || 'Login failed');
         } else {
-          // The signIn function handles redirection to dashboard
-          // No need to call onAuthSuccess since we're redirecting
+          // Call onAuthSuccess to let parent component handle redirect
+          onAuthSuccess();
         }
       } else {
         // Sign up flow
@@ -45,8 +45,8 @@ export default function AuthComponent({ onAuthSuccess }: AuthFormProps) {
         if (result?.error) {
           setError(result.error.message || 'Signup failed');
         } else {
-          // The signUp function handles redirection to dashboard
-          // No need to switch to login or call onAuthSuccess since we're redirecting
+          // Call onAuthSuccess to let parent component handle redirect
+          onAuthSuccess();
         }
       }
     } catch (err) {

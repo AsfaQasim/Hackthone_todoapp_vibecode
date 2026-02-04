@@ -29,7 +29,7 @@ from src.api.routes.chat import router as chat_router
 from src.api.middleware.auth_middleware import auth_middleware
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from src.models.base_models import Base
+
 
 
 @asynccontextmanager
@@ -40,8 +40,8 @@ async def lifespan(app: FastAPI):
 
     # Initialize database tables
     # Use the database URL from settings which handles environment-specific configurations
-    from src.db import engine, Base
-    Base.metadata.create_all(bind=engine)
+    from src.db import init_db
+    init_db()
 
     yield
 

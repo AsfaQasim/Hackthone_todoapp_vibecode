@@ -1,30 +1,45 @@
 // app/api/chat/[userId]/route.ts
 import { NextRequest } from 'next/server';
-import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
+import { auth } from '@/lib/auth';
 
 export async function POST(request: NextRequest, { params }: { params: { userId: string } }) {
   const { userId } = params;
   const body = await request.json();
 
-  // Get the auth token from cookies (primary storage)
-  let authToken = null;
-  const authCookie = cookies().get('auth_token');
-  if (authCookie) {
-    authToken = authCookie.value.trim(); // Ensure no whitespace
+  // Get session using Better Auth
+  let session;
+  try {
+    session = await auth.api.getSession({
+      headers: await headers()
+    });
+  } catch (error) {
+    console.error('Error getting session with Better Auth:', error);
   }
 
-  // Fallback: try to get token from Authorization header if not in cookies
-  if (!authToken) {
-    const authHeader = request.headers.get('authorization');
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      authToken = authHeader.substring(7).trim(); // Ensure no whitespace
-    }
+  if (!session) {
+    console.error('No active session found with Better Auth');
+    return new Response(JSON.stringify({ error: 'Authentication required' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
+  // Verify that the session user ID matches the requested userId
+  if (session.user.id !== userId) {
+    console.error(`User ID mismatch: session user ID ${session.user.id} does not match requested user ID ${userId}`);
+    return new Response(JSON.stringify({ error: 'Unauthorized access' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Get the JWT token from Better Auth session to forward to backend
+  // Better Auth stores the session token in the session object
+  const authToken = session.session?.token || session.sessionToken;
+
   if (!authToken) {
-    console.error('Authentication token not found in cookies or authorization header');
-    console.log('Cookies available:', cookies());
-    console.log('Request headers:', Object.fromEntries(request.headers.entries()));
+    console.error('No authentication token found in Better Auth session');
     return new Response(JSON.stringify({ error: 'Authentication token not found' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },

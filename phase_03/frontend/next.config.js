@@ -2,21 +2,16 @@
 const nextConfig = {
   trailingSlash: false,
 
-  // Simplified webpack configuration to address ChunkLoadError
-  webpack: (config, { dev, isServer }) => {
-    if (dev) {
-      // Disable webpack cache in development to prevent cache corruption
-      config.cache = false;
+  // Configure external packages for server components
+  experimental: {
+    serverComponentsExternalPackages: ["better-sqlite3", "pg", "bcrypt"],
+  },
 
-      // Use a more reliable devtool setting
-      config.devtool = 'eval-source-map';
-    }
-
-    // Ensure consistent chunk naming to prevent loading issues
+  // Ensure webpack uses the correct resolution
+  webpack: (config, { isServer }) => {
     if (!isServer) {
-      config.output.chunkFilename = 'static/chunks/[name].[contenthash:8].js';
+      // Client-side specific config
     }
-
     return config;
   },
 };
