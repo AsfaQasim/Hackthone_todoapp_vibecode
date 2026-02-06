@@ -17,18 +17,14 @@ async def auth_middleware(request: Request, call_next):
         "/login", "/register", "/signup", "/auth/login", "/auth/register", "/auth/signup"
     ]
 
-    # Chat endpoints should be more resilient to auth issues
-    # Per requirements: NEVER return 401 for chat endpoints
-    is_chat_endpoint = request.url.path.startswith("/api/") and "/chat" in request.url.path
-
     # Also check for paths that start with auth patterns
     is_public = any(request.url.path.startswith(path) for path in public_paths)
 
-    # Log the request path and whether it's public or chat
-    logger.info(f"Auth middleware: Path={request.url.path}, is_public={is_public}, is_chat_endpoint={is_chat_endpoint}")
+    # Log the request path and whether it's public
+    logger.info(f"Auth middleware: Path={request.url.path}, is_public={is_public}")
 
-    if is_public or is_chat_endpoint:
-        logger.info(f"Skipping auth for public/chat endpoint: {request.url.path}")
+    if is_public:
+        logger.info(f"Skipping auth for public endpoint: {request.url.path}")
         response = await call_next(request)
         return response
 

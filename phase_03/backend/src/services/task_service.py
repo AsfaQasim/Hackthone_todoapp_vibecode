@@ -3,8 +3,7 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
-from src.models.task import Task
-from src.models.user import User
+from src.models.base_models import Task, User, TaskStatus
 
 
 class TaskService:
@@ -29,7 +28,7 @@ class TaskService:
             title=title,
             description=description,
             user_id=user.id,
-            status='pending'
+            status=TaskStatus.PENDING
         )
         
         self.db.add(task)
@@ -93,9 +92,9 @@ class TaskService:
                 setattr(task, field, value)
         
         # If status is being updated to completed, set completed_at
-        if 'status' in updates and updates['status'] == 'completed':
+        if 'status' in updates and updates['status'] == TaskStatus.COMPLETED:
             task.completed_at = datetime.utcnow()
-        elif 'status' in updates and updates['status'] != 'completed':
+        elif 'status' in updates and updates['status'] != TaskStatus.COMPLETED:
             task.completed_at = None  # Reset completed_at if task is reopened
         
         self.db.commit()
@@ -134,7 +133,7 @@ class TaskService:
         Returns:
             The updated Task object if successful, None if not found or not owned by user
         """
-        return self.update_task(user, task_id, status='completed')
+        return self.update_task(user, task_id, status=TaskStatus.COMPLETED)
     
     def reopen_task(self, user: User, task_id: str) -> Optional[Task]:
         """
@@ -147,4 +146,4 @@ class TaskService:
         Returns:
             The updated Task object if successful, None if not found or not owned by user
         """
-        return self.update_task(user, task_id, status='pending', completed_at=None)
+        return self.update_task(user, task_id, status=TaskStatus.PENDING, completed_at=None)

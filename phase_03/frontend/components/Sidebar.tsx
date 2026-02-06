@@ -14,6 +14,7 @@ const Sidebar = () => {
     { href: '/', label: 'Home', icon: Home },
     { href: '/dashboard', label: 'Dashboard', icon: Home },
     { href: '/tasks', label: 'Tasks', icon: Calendar },
+    { href: '/general-task-execution', label: 'AI Tasks', icon: Calendar },
     { href: '/profile', label: 'Profile', icon: User },
     { href: '/chat', label: 'AI Assistant', icon: User },
   ];

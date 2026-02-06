@@ -26,7 +26,12 @@ class Settings(BaseSettings):
     # JWT settings
     secret_key: str = os.getenv("BETTER_AUTH_SECRET", "your-secret-key-change-in-production")
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
+    access_token_expire_minutes: int = 1440  # 24 hours instead of 30 minutes
+    
+    @property
+    def jwt_secret(self) -> str:
+        """Get JWT secret key."""
+        return self.secret_key
     
     # OpenAI settings
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")

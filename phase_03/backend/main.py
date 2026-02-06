@@ -20,7 +20,8 @@ from src.utils.error_handlers import (
 )
 
 from routes.tasks import router as tasks_router
-from src.api.routes.chat import router as chat_router
+from src.api.routes.chat_simple import router as chat_router  # Using chat_simple with OpenAI
+from src.api.routes.tasks_simple import router as tasks_simple_router  # Simplified tasks endpoint
 from routes.auth import router as auth_router
 
 from src.api.middleware.auth_middleware import auth_middleware
@@ -86,7 +87,8 @@ app.add_exception_handler(Exception, general_exception_handler)
 
 app.include_router(auth_router)
 app.include_router(tasks_router)
-app.include_router(chat_router, prefix="/api")
+app.include_router(tasks_simple_router)  # Simplified tasks endpoint (no user_id in path)
+app.include_router(chat_router)  # Chat router already has /api prefix
 
 # ==============================
 # Routes

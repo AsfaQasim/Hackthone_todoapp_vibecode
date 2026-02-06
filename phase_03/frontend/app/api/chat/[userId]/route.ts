@@ -41,20 +41,20 @@ export async function POST(
     });
   }
 
-  // Verify that the user ID in the token matches the path parameter
+  // Get user ID from token (this is the authenticated user)
   const tokenUserId = decodedToken.sub || decodedToken.userId || decodedToken.user_id;
-
-  if (tokenUserId !== userId) {
-    console.log(`User ID mismatch: token=${tokenUserId}, path=${userId}`);
-    return new Response(JSON.stringify({ error: "Unauthorized access" }), {
-      status: 403,
-    });
-  }
+  
+  // Log for debugging
+  console.log(`Chat request: path userId=${userId}, token userId=${tokenUserId}`);
+  
+  // Use the token's user ID (authenticated user) instead of path parameter
+  // This ensures we always use the correct authenticated user
+  const authenticatedUserId = tokenUserId;
 
   try {
-    // Forward the request to the backend
+    // Forward the request to the backend using the authenticated user ID
     const backendResponse = await fetch(
-      `http://localhost:8000/api/${userId}/chat`,
+      `http://localhost:8000/api/${authenticatedUserId}/chat`,
       {
         method: "POST",
         headers: {

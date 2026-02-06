@@ -2,7 +2,7 @@
 
 from sqlalchemy.orm import Session
 from typing import Dict, Any
-from ..models.user import User
+from src.models.base_models import User
 from ..services.mcp_tool_service import MCPTool, MCPToolResult
 from ..services.task_service import TaskService
 

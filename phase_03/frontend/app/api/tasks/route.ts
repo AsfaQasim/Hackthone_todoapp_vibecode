@@ -59,73 +59,70 @@ async function getUserIdFromRequest(request: Request): Promise<string | null> {
 
 export async function GET(request: Request) {
   try {
-    // Initialize database if not already done
-    if (!dbInitialized) {
-      await initializeTasksTable();
-      dbInitialized = true;
-    }
-
+    console.log('=== /api/tasks GET request ===');
+    
     // Get user ID from the request
     const userId = await getUserIdFromRequest(request);
+    console.log('User ID from request:', userId);
+    
     if (!userId) {
-      // For resilience, continue without user ID
-      console.warn("No user ID found, proceeding without authentication");
+      console.warn("No user ID found");
+      return NextResponse.json([], { status: 200 });
     }
 
-    let tasks = [];
-    let numericUserId: number | null = null;
+    // Get auth token
+    const authHeader = request.headers.get('Authorization');
+    let token = null;
 
-    if (userId) {
-      // Convert the UUID string to a number for the frontend database
-      try {
-        // Try to parse as integer first (in case it's already a number)
-        numericUserId = parseInt(userId as string);
-        if (isNaN(numericUserId)) {
-          // If it's not a number, hash the string to get a number
-          let hash = 0;
-          const str = userId as string;
-          for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash |= 0; // Convert to 32-bit integer
-          }
-          numericUserId = Math.abs(hash);
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+      console.log('Token from Authorization header:', token.substring(0, 20) + '...');
+    } else {
+      // Try to get token from cookies
+      const cookies = request.headers.get('cookie');
+      if (cookies) {
+        const authTokenMatch = cookies.match(/auth_token=([^;]+)/);
+        if (authTokenMatch) {
+          token = authTokenMatch[1];
+          console.log('Token from cookies:', token.substring(0, 20) + '...');
         }
-      } catch (error) {
-        console.error('Error converting user ID to number:', error);
       }
     }
 
-    // Try to fetch tasks from backend
+    if (!token) {
+      console.warn("No auth token found");
+      return NextResponse.json([], { status: 200 });
+    }
+
+    // Fetch tasks from backend
     try {
-      if (numericUserId !== null) {
-        tasks = await getTasksByUserId(numericUserId);
+      const backendUrl = `http://localhost:8000/api/${userId}/tasks`;
+      console.log(`Fetching tasks from backend: ${backendUrl}`);
+      
+      const backendResponse = await fetch(backendUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      console.log('Backend response status:', backendResponse.status);
+
+      if (backendResponse.ok) {
+        const tasks = await backendResponse.json();
+        console.log(`✅ Fetched ${tasks.length} tasks from backend`);
+        console.log('Tasks:', JSON.stringify(tasks, null, 2));
+        return NextResponse.json(tasks, { status: 200 });
+      } else {
+        const errorText = await backendResponse.text();
+        console.error("Backend fetch failed:", backendResponse.status, errorText);
+        return NextResponse.json([], { status: 200 });
       }
     } catch (error) {
-      console.error('Backend task fetch failed:', error);
-      // Continue without backend tasks
+      console.error('Backend connection failed:', error);
+      return NextResponse.json([], { status: 200 });
     }
-
-    // Reconstruct task list from session store if backend returns empty or fails
-    if (!tasks || tasks.length === 0) {
-      if (userId) {
-        const sessionTasks = sessionTaskStore.get(userId as string) || [];
-        if (sessionTasks.length > 0) {
-          console.log(`Reconstructing tasks from session store for user ${userId}`);
-          tasks = sessionTasks;
-        }
-      }
-    }
-
-    // Ensure we always return a valid response
-    if (!tasks) {
-      tasks = [];
-    }
-
-    return NextResponse.json(tasks, { status: 200 });
   } catch (error) {
     console.error('Error fetching tasks:', error);
-    // Return empty array instead of error for resilience
     return NextResponse.json([], { status: 200 });
   }
 }

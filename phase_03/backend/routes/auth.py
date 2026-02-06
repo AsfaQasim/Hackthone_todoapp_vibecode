@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from pydantic import BaseModel
 from typing import Optional
+from sqlmodel import Session
 from src.services.auth_service import create_access_token, get_current_user, verify_token
 from src.db import get_db
 import uuid
@@ -59,17 +60,50 @@ def login(login_request: LoginRequest):
 
 
 @router.post("/register", response_model=TokenResponse)
-def register(register_request: RegisterRequest):
+def register(register_request: RegisterRequest, db: Session = Depends(get_db)):
     """
-    Register endpoint that would create a new user in the database
+    Register endpoint that creates a new user in the database
     """
     try:
-        user_id = str(uuid.uuid4())
+        from src.models.base_models import User
+        import uuid
+        
+        # Generate user ID
+        user_id = uuid.uuid4()
+        
+        # Check if user already exists
+        existing_user = db.query(User).filter(User.email == register_request.email).first()
+        if existing_user:
+            logger.info(f"User already exists: {register_request.email}")
+            # Return token for existing user
+            user_data = {
+                "sub": str(existing_user.id),
+                "email": existing_user.email,
+                "user_email": existing_user.email,
+                "name": existing_user.name
+            }
+            token = create_access_token(user_data)
+            return {"access_token": token, "token_type": "bearer"}
+        
+        # Create new user in database
+        new_user = User(
+            id=user_id,
+            email=register_request.email,
+            name=register_request.name or register_request.email.split('@')[0]
+        )
+        
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        
+        logger.info(f"✅ New user created in database: {new_user.email} (ID: {new_user.id})")
+        
+        # Create token with the actual user ID from database
         user_data = {
-            "sub": user_id,
-            "email": register_request.email,
-            "user_email": register_request.email,
-            "name": register_request.name or register_request.email.split('@')[0]
+            "sub": str(new_user.id),
+            "email": new_user.email,
+            "user_email": new_user.email,
+            "name": new_user.name
         }
 
         token = create_access_token(user_data)
@@ -77,6 +111,7 @@ def register(register_request: RegisterRequest):
     except Exception as e:
         logger.error(f"Registration error: {e}")
         logger.error(traceback.format_exc())
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Registration failed due to an internal server error"

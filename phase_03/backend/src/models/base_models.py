@@ -36,7 +36,7 @@ class TaskBase(SQLModel):
 class Task(TaskBase, table=True):
     __tablename__ = "tasks"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(foreign_key="users.id")
+    user_id: str = Field(foreign_key="users.id")  # Changed to str to match database
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     completed_at: Optional[datetime] = None

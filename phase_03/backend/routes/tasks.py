@@ -68,13 +68,30 @@ def list_tasks(
                 detail="Access denied: You can only access your own tasks"
             )
 
-        query = select(Task).where(Task.user_id == user_id)
-
-        if status:
-            if status in [s.value for s in TaskStatus]:
-                query = query.where(Task.status == status)
-
-        tasks = session.exec(query).all()
+        # Use raw SQL query to bypass SQLModel UUID conversion
+        logger.info(f"Querying tasks for user_id: {user_id}")
+        
+        from sqlalchemy import text
+        query_text = text("SELECT * FROM tasks WHERE user_id = :user_id")
+        result = session.execute(query_text, {"user_id": user_id})
+        
+        # Convert to Task objects - use index-based access for raw SQL results
+        tasks = []
+        for row in result:
+            # Row columns: id, title, description, status, user_id, created_at, updated_at, completed_at
+            task = Task(
+                id=row[0],  # id
+                title=row[1],  # title
+                description=row[2],  # description
+                status=row[3],  # status
+                user_id=row[4],  # user_id
+                created_at=row[5],  # created_at
+                updated_at=row[6],  # updated_at
+                completed_at=row[7]  # completed_at
+            )
+            tasks.append(task)
+        
+        logger.info(f"Found {len(tasks)} tasks")
         return tasks
     except HTTPException:
         # Re-raise HTTP exceptions as-is
@@ -106,16 +123,43 @@ def create_task(
                 detail="Access denied: You can only create tasks for yourself"
             )
 
-        db_task = Task(
-            title=task.title,
-            description=task.description,
-            status=task.status,
-            user_id=user_id # SQLModel will handle UUID conversion if string provided
-        )
-
-        session.add(db_task)
+        # Use raw SQL to ensure user_id is stored as string
+        from sqlalchemy import text
+        import uuid
+        task_id = str(uuid.uuid4())
+        now = datetime.utcnow().isoformat()
+        
+        query_text = text("""
+            INSERT INTO tasks (id, title, description, status, user_id, created_at, updated_at)
+            VALUES (:id, :title, :description, :status, :user_id, :created_at, :updated_at)
+        """)
+        
+        session.execute(query_text, {
+            "id": task_id,
+            "title": task.title,
+            "description": task.description,
+            "status": task.status.value,
+            "user_id": user_id,
+            "created_at": now,
+            "updated_at": now
+        })
         session.commit()
-        session.refresh(db_task)
+        
+        # Fetch the created task
+        fetch_query = text("SELECT * FROM tasks WHERE id = :id")
+        result = session.execute(fetch_query, {"id": task_id})
+        row = result.fetchone()
+        
+        db_task = Task(
+            id=row[0],
+            title=row[1],
+            description=row[2],
+            status=row[3],
+            user_id=row[4],
+            created_at=row[5],
+            updated_at=row[6],
+            completed_at=row[7]
+        )
 
         return db_task
     except HTTPException:
@@ -148,14 +192,27 @@ def get_task(
                 detail="Access denied: You can only access your own tasks"
             )
 
-        query = select(Task).where(Task.id == task_id, Task.user_id == user_id)
-        db_task = session.exec(query).first()
+        from sqlalchemy import text
+        query_text = text("SELECT * FROM tasks WHERE id = :task_id AND user_id = :user_id")
+        result = session.execute(query_text, {"task_id": str(task_id), "user_id": user_id})
+        row = result.fetchone()
 
-        if not db_task:
+        if not row:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Task not found"
             )
+
+        db_task = Task(
+            id=row[0],
+            title=row[1],
+            description=row[2],
+            status=row[3],
+            user_id=row[4],
+            created_at=row[5],
+            updated_at=row[6],
+            completed_at=row[7]
+        )
 
         return db_task
     except HTTPException:
@@ -189,24 +246,50 @@ def update_task(
                 detail="Access denied: You can only update your own tasks"
             )
 
-        query = select(Task).where(Task.id == task_id, Task.user_id == user_id)
-        db_task = session.exec(query).first()
+        from sqlalchemy import text
+        
+        # First check if task exists
+        check_query = text("SELECT * FROM tasks WHERE id = :task_id AND user_id = :user_id")
+        result = session.execute(check_query, {"task_id": str(task_id), "user_id": user_id})
+        row = result.fetchone()
 
-        if not db_task:
+        if not row:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Task not found"
             )
 
+        # Build update query dynamically
         task_data = task_update.model_dump(exclude_unset=True)
+        if not task_data:
+            # No updates provided, return existing task
+            return Task(
+                id=row[0], title=row[1], description=row[2], status=row[3],
+                user_id=row[4], created_at=row[5], updated_at=row[6], completed_at=row[7]
+            )
+        
+        # Build SET clause
+        set_parts = []
+        params = {"task_id": str(task_id), "user_id": user_id, "updated_at": datetime.utcnow().isoformat()}
+        
         for key, value in task_data.items():
-            setattr(db_task, key, value)
-
-        db_task.updated_at = datetime.utcnow()
-
-        session.add(db_task)
+            set_parts.append(f"{key} = :{key}")
+            params[key] = value.value if hasattr(value, 'value') else value
+        
+        set_parts.append("updated_at = :updated_at")
+        
+        update_query = text(f"UPDATE tasks SET {', '.join(set_parts)} WHERE id = :task_id AND user_id = :user_id")
+        session.execute(update_query, params)
         session.commit()
-        session.refresh(db_task)
+
+        # Fetch updated task
+        result = session.execute(check_query, {"task_id": str(task_id), "user_id": user_id})
+        row = result.fetchone()
+        
+        db_task = Task(
+            id=row[0], title=row[1], description=row[2], status=row[3],
+            user_id=row[4], created_at=row[5], updated_at=row[6], completed_at=row[7]
+        )
 
         return db_task
     except HTTPException:
@@ -239,17 +322,24 @@ def delete_task(
                 detail="Access denied: You can only delete your own tasks"
             )
 
-        query = select(Task).where(Task.id == task_id, Task.user_id == user_id)
-        db_task = session.exec(query).first()
+        from sqlalchemy import text
+        
+        # Check if task exists
+        check_query = text("SELECT * FROM tasks WHERE id = :task_id AND user_id = :user_id")
+        result = session.execute(check_query, {"task_id": str(task_id), "user_id": user_id})
+        row = result.fetchone()
 
-        if not db_task:
+        if not row:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Task not found"
             )
 
-        session.delete(db_task)
+        # Delete the task
+        delete_query = text("DELETE FROM tasks WHERE id = :task_id AND user_id = :user_id")
+        session.execute(delete_query, {"task_id": str(task_id), "user_id": user_id})
         session.commit()
+        
         return {"message": "Task deleted successfully"}
     except HTTPException:
         # Re-raise HTTP exceptions as-is
@@ -281,27 +371,47 @@ def toggle_task_completion(
                 detail="Access denied: You can only modify your own tasks"
             )
 
-        query = select(Task).where(Task.id == task_id, Task.user_id == user_id)
-        db_task = session.exec(query).first()
+        from sqlalchemy import text
+        
+        # Check if task exists
+        check_query = text("SELECT * FROM tasks WHERE id = :task_id AND user_id = :user_id")
+        result = session.execute(check_query, {"task_id": str(task_id), "user_id": user_id})
+        row = result.fetchone()
 
-        if not db_task:
+        if not row:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Task not found"
             )
 
-        if db_task.status == TaskStatus.COMPLETED:
-            db_task.status = TaskStatus.PENDING
-            db_task.completed_at = None
-        else:
-            db_task.status = TaskStatus.COMPLETED
-            db_task.completed_at = datetime.utcnow()
-
-        db_task.updated_at = datetime.utcnow()
-
-        session.add(db_task)
+        # Toggle completion status
+        current_status = row[3]  # status column
+        new_status = TaskStatus.PENDING if current_status == TaskStatus.COMPLETED else TaskStatus.COMPLETED
+        completed_at = datetime.utcnow().isoformat() if new_status == TaskStatus.COMPLETED else None
+        
+        update_query = text("""
+            UPDATE tasks 
+            SET status = :status, completed_at = :completed_at, updated_at = :updated_at
+            WHERE id = :task_id AND user_id = :user_id
+        """)
+        
+        session.execute(update_query, {
+            "status": new_status.value,
+            "completed_at": completed_at,
+            "updated_at": datetime.utcnow().isoformat(),
+            "task_id": str(task_id),
+            "user_id": user_id
+        })
         session.commit()
-        session.refresh(db_task)
+
+        # Fetch updated task
+        result = session.execute(check_query, {"task_id": str(task_id), "user_id": user_id})
+        row = result.fetchone()
+        
+        db_task = Task(
+            id=row[0], title=row[1], description=row[2], status=row[3],
+            user_id=row[4], created_at=row[5], updated_at=row[6], completed_at=row[7]
+        )
 
         return db_task
     except HTTPException:
