@@ -1,10 +1,11 @@
 {
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/.next",
+  "installCommand": "cd frontend && npm install --no-optional",
   "functions": {
     "app/api/**/*": {
       "memory": 1024,
       "maxDuration": 30
     }
-  },
-  "buildCommand": "NEXT_PRIVATE_SKIP_SWC_INSTALLATION=1 npm run build",
-  "installCommand": "npm install --no-optional"
+  }
 }
