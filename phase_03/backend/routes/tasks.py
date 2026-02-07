@@ -72,8 +72,41 @@ def list_tasks(
         logger.info(f"Querying tasks for user_id: {user_id}")
         
         from sqlalchemy import text
-        query_text = text("SELECT * FROM tasks WHERE user_id = :user_id")
-        result = session.execute(query_text, {"user_id": user_id})
+        
+        # First, try to get user by email to find all their tasks
+        # This handles the case where login creates different user IDs
+        try:
+            # Get user email from token
+            user_email = request.state.user.get("email") if hasattr(request.state, "user") else None
+            
+            if user_email:
+                logger.info(f"Also checking tasks by email: {user_email}")
+                
+                # Get user ID from email
+                user_query = text("SELECT id FROM users WHERE email = :email")
+                user_result = session.execute(user_query, {"email": user_email})
+                user_row = user_result.fetchone()
+                
+                if user_row:
+                    actual_user_id = str(user_row[0])
+                    logger.info(f"Found user ID from email: {actual_user_id}")
+                    
+                    # Use the actual user ID from database
+                    query_text = text("SELECT * FROM tasks WHERE user_id = :user_id")
+                    result = session.execute(query_text, {"user_id": actual_user_id})
+                else:
+                    # Fallback to provided user_id
+                    query_text = text("SELECT * FROM tasks WHERE user_id = :user_id")
+                    result = session.execute(query_text, {"user_id": user_id})
+            else:
+                # No email, use provided user_id
+                query_text = text("SELECT * FROM tasks WHERE user_id = :user_id")
+                result = session.execute(query_text, {"user_id": user_id})
+        except Exception as email_error:
+            logger.error(f"Error getting user by email: {email_error}")
+            # Fallback to provided user_id
+            query_text = text("SELECT * FROM tasks WHERE user_id = :user_id")
+            result = session.execute(query_text, {"user_id": user_id})
         
         # Convert to Task objects - use index-based access for raw SQL results
         tasks = []
