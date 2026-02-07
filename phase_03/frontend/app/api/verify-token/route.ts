@@ -28,8 +28,10 @@ export async function GET(request: NextRequest) {
       finalAuthHeader = `Bearer ${authToken}`;
     }
 
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    
     // Forward the request to the backend
-    const backendResponse = await fetch('http://localhost:8000/verify-token', {
+    const backendResponse = await fetch(`${API_URL}/verify-token`, {
       method: 'GET',
       headers: {
         'authorization': finalAuthHeader || '',

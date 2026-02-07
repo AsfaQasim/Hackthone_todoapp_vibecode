@@ -94,9 +94,11 @@ export async function GET(request: Request) {
       return NextResponse.json([], { status: 200 });
     }
 
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    
     // Fetch tasks from backend
     try {
-      const backendUrl = `http://localhost:8000/api/${userId}/tasks`;
+      const backendUrl = `${API_URL}/api/${userId}/tasks`;
       console.log(`Fetching tasks from backend: ${backendUrl}`);
       
       const backendResponse = await fetch(backendUrl, {
@@ -196,7 +198,8 @@ export async function POST(request: Request) {
 
         if (token) {
           // Make direct API call to backend to create the task
-          const backendResponse = await fetch('http://localhost:8000/api/tasks', {
+          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+          const backendResponse = await fetch(`${API_URL}/api/tasks`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

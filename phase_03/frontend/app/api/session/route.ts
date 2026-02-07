@@ -7,8 +7,10 @@ export async function GET(request: NextRequest) {
     const authHeader = request.headers.get('authorization');
     const cookieHeader = request.headers.get('cookie');
 
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    
     // Forward the request to the backend
-    const backendResponse = await fetch('http://localhost:8000/session', {
+    const backendResponse = await fetch(`${API_URL}/session`, {
       method: 'GET',
       headers: {
         'authorization': authHeader || '',

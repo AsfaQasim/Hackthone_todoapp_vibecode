@@ -52,9 +52,11 @@ export async function POST(
   const authenticatedUserId = tokenUserId;
 
   try {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    
     // Forward the request to the backend using the authenticated user ID
     const backendResponse = await fetch(
-      `http://localhost:8000/api/${authenticatedUserId}/chat`,
+      `${API_URL}/api/${authenticatedUserId}/chat`,
       {
         method: "POST",
         headers: {

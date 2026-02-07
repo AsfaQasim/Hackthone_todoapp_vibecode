@@ -3,8 +3,10 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    
     // Forward the request to the backend
-    const backendResponse = await fetch('http://localhost:8000/logout', {
+    const backendResponse = await fetch(`${API_URL}/logout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
