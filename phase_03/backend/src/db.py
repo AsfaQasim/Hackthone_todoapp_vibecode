@@ -4,7 +4,7 @@ from typing import Generator
 from sqlmodel import create_engine, Session, SQLModel
 from config import settings
 import os
-
+# db
 # Create the database engine with proper configuration
 DATABASE_URL = os.getenv("DATABASE_URL")
 
