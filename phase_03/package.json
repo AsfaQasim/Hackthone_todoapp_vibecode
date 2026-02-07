@@ -2,11 +2,13 @@
   "name": "todo-app-monorepo",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
     "dev": "cd frontend && npm run dev",
-    "build": "cd frontend && npm install && npm run build",
-    "start": "cd frontend && npm start",
-    "install": "cd frontend && npm install"
+    "build": "cd frontend && npm run build",
+    "start": "cd frontend && npm start"
   },
   "dependencies": {
     "cross-env": "^10.1.0",
