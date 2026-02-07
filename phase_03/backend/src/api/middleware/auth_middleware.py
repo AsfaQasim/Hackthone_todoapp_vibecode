@@ -14,11 +14,16 @@ async def auth_middleware(request: Request, call_next):
         "/", "/health", "/docs", "/redoc", "/openapi.json", "/favicon.ico", "/favicon.png",
         "/api/login", "/api/register", "/api/signup",
         "/api/auth/login", "/api/auth/register", "/api/auth/signup",
-        "/login", "/register", "/signup", "/auth/login", "/auth/register", "/auth/signup"
+        "/login", "/register", "/signup", "/auth/login", "/auth/register", "/auth/signup",
+        "/api/my-tasks"  # Temporary: Allow tasks endpoint without auth
     ]
 
-    # Also check for paths that start with auth patterns
+    # Also check for paths that start with auth patterns or contain specific patterns
     is_public = any(request.url.path.startswith(path) for path in public_paths)
+    
+    # Temporary: Allow /api/{user_id}/tasks without auth
+    if "/tasks" in request.url.path:
+        is_public = True
 
     # Log the request path and whether it's public
     logger.info(f"Auth middleware: Path={request.url.path}, is_public={is_public}")
