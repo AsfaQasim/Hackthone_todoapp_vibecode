@@ -177,13 +177,27 @@ async def chat_simple(
             # Create the task using raw SQL to ensure proper user_id storage
             try:
                 from sqlalchemy import text
+                from src.config import settings
+                
                 task_id = str(uuid.uuid4())
                 now = datetime.utcnow().isoformat()
                 
-                query_text = text("""
-                    INSERT INTO tasks (id, title, description, status, user_id, created_at, updated_at)
-                    VALUES (:id, :title, :description, :status, :user_id, :created_at, :updated_at)
-                """)
+                # Check if using PostgreSQL or SQLite
+                db_url = settings.database_url
+                is_postgres = 'postgresql' in db_url.lower()
+                
+                if is_postgres:
+                    # PostgreSQL requires ENUM cast
+                    query_text = text("""
+                        INSERT INTO tasks (id, title, description, status, user_id, created_at, updated_at)
+                        VALUES (:id, :title, :description, :status::taskstatus, :user_id, :created_at, :updated_at)
+                    """)
+                else:
+                    # SQLite doesn't support ENUM cast
+                    query_text = text("""
+                        INSERT INTO tasks (id, title, description, status, user_id, created_at, updated_at)
+                        VALUES (:id, :title, :description, :status, :user_id, :created_at, :updated_at)
+                    """)
                 
                 db.execute(query_text, {
                     "id": task_id,
@@ -325,13 +339,27 @@ async def chat_simple(
                     # Create the task using raw SQL
                     try:
                         from sqlalchemy import text
+                        from src.config import settings
+                        
                         task_id = str(uuid.uuid4())
                         now = datetime.utcnow().isoformat()
                         
-                        query_text = text("""
-                            INSERT INTO tasks (id, title, description, status, user_id, created_at, updated_at)
-                            VALUES (:id, :title, :description, :status, :user_id, :created_at, :updated_at)
-                        """)
+                        # Check if using PostgreSQL or SQLite
+                        db_url = settings.database_url
+                        is_postgres = 'postgresql' in db_url.lower()
+                        
+                        if is_postgres:
+                            # PostgreSQL requires ENUM cast
+                            query_text = text("""
+                                INSERT INTO tasks (id, title, description, status, user_id, created_at, updated_at)
+                                VALUES (:id, :title, :description, :status::taskstatus, :user_id, :created_at, :updated_at)
+                            """)
+                        else:
+                            # SQLite doesn't support ENUM cast
+                            query_text = text("""
+                                INSERT INTO tasks (id, title, description, status, user_id, created_at, updated_at)
+                                VALUES (:id, :title, :description, :status, :user_id, :created_at, :updated_at)
+                            """)
                         
                         db.execute(query_text, {
                             "id": task_id,
