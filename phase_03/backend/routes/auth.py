@@ -27,6 +27,8 @@ class RegisterRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    user_id: Optional[str] = None
+    token: Optional[str] = None  # Alias for access_token for frontend compatibility
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -49,7 +51,12 @@ def login(login_request: LoginRequest):
         }
 
         token = create_access_token(user_data)
-        return {"access_token": token, "token_type": "bearer"}
+        return {
+            "access_token": token,
+            "token": token,  # Alias for frontend
+            "token_type": "bearer",
+            "user_id": user_id
+        }
     except Exception as e:
         logger.error(f"Login error: {e}")
         logger.error(traceback.format_exc())
@@ -83,7 +90,12 @@ def register(register_request: RegisterRequest, db: Session = Depends(get_db)):
                 "name": existing_user.name
             }
             token = create_access_token(user_data)
-            return {"access_token": token, "token_type": "bearer"}
+            return {
+                "access_token": token,
+                "token": token,  # Alias for frontend
+                "token_type": "bearer",
+                "user_id": str(existing_user.id)
+            }
         
         # Create new user in database
         new_user = User(
@@ -107,7 +119,12 @@ def register(register_request: RegisterRequest, db: Session = Depends(get_db)):
         }
 
         token = create_access_token(user_data)
-        return {"access_token": token, "token_type": "bearer"}
+        return {
+            "access_token": token,
+            "token": token,  # Alias for frontend
+            "token_type": "bearer",
+            "user_id": str(new_user.id)
+        }
     except Exception as e:
         logger.error(f"Registration error: {e}")
         logger.error(traceback.format_exc())

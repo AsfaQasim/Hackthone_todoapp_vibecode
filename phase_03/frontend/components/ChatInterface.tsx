@@ -40,7 +40,8 @@ export default function ChatInterface({ userId, onTaskAdded }: ChatInterfaceProp
     // Check if backend is accessible
     const checkConnection = async () => {
       try {
-        const response = await fetch('http://localhost:8000/health');
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const response = await fetch(`${API_URL}/health`);
         if (response.ok) {
           setConnectionStatus('connected');
         } else {
