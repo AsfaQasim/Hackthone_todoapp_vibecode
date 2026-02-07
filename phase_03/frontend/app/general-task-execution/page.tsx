@@ -30,6 +30,14 @@ export default function GeneralTaskExecutionPage() {
     if (user) {
       console.log('Loading tasks for user:', user.email);
       loadTasks();
+      
+      // Auto-refresh every 5 seconds
+      const interval = setInterval(() => {
+        console.log('Auto-refreshing tasks...');
+        loadTasks();
+      }, 5000);
+      
+      return () => clearInterval(interval);
     }
   }, [user]);
 
@@ -222,9 +230,18 @@ export default function GeneralTaskExecutionPage() {
           >
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <h2 className="text-xl sm:text-2xl font-semibold text-white">Your AI Tasks</h2>
-              <span className="text-gray-400 text-sm sm:text-base">
-                {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
-              </span>
+              <div className="flex items-center gap-4">
+                <Button
+                  onClick={loadTasks}
+                  disabled={loading}
+                  className="text-sm px-4 py-2"
+                >
+                  {loading ? 'Refreshing...' : '🔄 Refresh'}
+                </Button>
+                <span className="text-gray-400 text-sm sm:text-base">
+                  {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+                </span>
+              </div>
             </div>
 
             {loading ? (
