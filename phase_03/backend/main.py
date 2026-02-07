@@ -114,3 +114,11 @@ if __name__ == "__main__":
         port=8000,
         reload=True if settings.environment == "development" else False
     )
+
+
+# ==============================
+# Vercel Handler
+# ==============================
+
+# Export app for Vercel
+handler = app
