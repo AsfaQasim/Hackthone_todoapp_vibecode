@@ -39,17 +39,26 @@ def login(login_request: LoginRequest, db: Session = Depends(get_db)):
     try:
         from src.models.base_models import User
         
+        logger.info(f"=" * 60)
+        logger.info(f"🔐 LOGIN REQUEST: {login_request.email}")
+        
         # Check if user exists in database
         existing_user = db.query(User).filter(User.email == login_request.email).first()
+        
+        logger.info(f"📊 Database query result: {existing_user}")
         
         if existing_user:
             # User exists, use their ID
             user_id = str(existing_user.id)
             logger.info(f"✅ Existing user found: {existing_user.email} (ID: {user_id})")
+            logger.info(f"🎯 USING EXISTING USER ID: {user_id}")
         else:
             # User doesn't exist, create new user
             import uuid
             user_id = str(uuid.uuid4())
+            
+            logger.info(f"⚠️  User not found in database, creating new user")
+            logger.info(f"🆕 NEW USER ID: {user_id}")
             
             new_user = User(
                 id=user_id,
@@ -62,6 +71,9 @@ def login(login_request: LoginRequest, db: Session = Depends(get_db)):
             db.refresh(new_user)
             
             logger.info(f"✅ New user created: {new_user.email} (ID: {user_id})")
+        
+        logger.info(f"🔑 Final user_id being returned: {user_id}")
+        logger.info(f"=" * 60)
         
         # Create JWT token
         user_data = {
