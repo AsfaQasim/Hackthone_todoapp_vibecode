@@ -12,14 +12,17 @@ from typing import Dict, Any
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create file handler for detailed logs
-file_handler = logging.FileHandler("app.log")
-file_handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
-
-# Add file handler to logger
-logger.addHandler(file_handler)
+# Only use file handler if not in serverless environment
+import os
+if not os.environ.get('VERCEL'):
+    try:
+        file_handler = logging.FileHandler("app.log")
+        file_handler.setLevel(logging.INFO)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    except:
+        pass  # Skip file logging in read-only environments
 
 async def log_request_middleware(request: Request, call_next):
     """Middleware to log incoming requests."""
