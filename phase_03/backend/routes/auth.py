@@ -32,17 +32,38 @@ class TokenResponse(BaseModel):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(login_request: LoginRequest):
+def login(login_request: LoginRequest, db: Session = Depends(get_db)):
     """
-    Login endpoint that would validate credentials against the database
-    In a real implementation, this would verify the user's credentials
-    and return a JWT token. Since we're using Better Auth on the frontend,
-    this is mainly for compatibility purposes.
+    Login endpoint that validates credentials against the database
     """
     try:
-        # For this implementation, we'll simulate a successful login
-        # and return a JWT token that the backend can verify
-        user_id = str(uuid.uuid4())
+        from src.models.base_models import User
+        
+        # Check if user exists in database
+        existing_user = db.query(User).filter(User.email == login_request.email).first()
+        
+        if existing_user:
+            # User exists, use their ID
+            user_id = str(existing_user.id)
+            logger.info(f"✅ Existing user found: {existing_user.email} (ID: {user_id})")
+        else:
+            # User doesn't exist, create new user
+            import uuid
+            user_id = str(uuid.uuid4())
+            
+            new_user = User(
+                id=user_id,
+                email=login_request.email,
+                name=login_request.email.split('@')[0]
+            )
+            
+            db.add(new_user)
+            db.commit()
+            db.refresh(new_user)
+            
+            logger.info(f"✅ New user created: {new_user.email} (ID: {user_id})")
+        
+        # Create JWT token
         user_data = {
             "sub": user_id,
             "email": login_request.email,
