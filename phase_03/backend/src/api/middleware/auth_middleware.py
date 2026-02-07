@@ -11,7 +11,7 @@ async def auth_middleware(request: Request, call_next):
     """Middleware to handle authentication for all requests."""
     # Skip authentication for health check and public endpoints
     public_paths = [
-        "/health", "/docs", "/redoc", "/openapi.json",
+        "/", "/health", "/docs", "/redoc", "/openapi.json", "/favicon.ico", "/favicon.png",
         "/api/login", "/api/register", "/api/signup",
         "/api/auth/login", "/api/auth/register", "/api/auth/signup",
         "/login", "/register", "/signup", "/auth/login", "/auth/register", "/auth/signup"
