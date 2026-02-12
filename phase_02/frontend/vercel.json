@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "app/api/**/*": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
+  "buildCommand": "NEXT_PRIVATE_SKIP_SWC_INSTALLATION=1 npm run build",
+  "installCommand": "npm install --no-optional"
+}

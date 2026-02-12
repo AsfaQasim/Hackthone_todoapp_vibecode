@@ -1,0 +1,38 @@
+🎉 AI Chatbot Application Deployed Successfully!
+
+Your application has been deployed to Kubernetes.
+
+To access your application:
+
+1. Get the application URLs:
+
+   Backend API:
+   {{- if .Values.backend.enabled }}
+   export BACKEND_NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "todo-chat-bot.fullname" . }}-backend)
+   export BACKEND_NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+   echo "Backend API: http://$BACKEND_NODE_IP:$BACKEND_NODE_PORT"
+   echo "Backend Docs: http://$BACKEND_NODE_IP:$BACKEND_NODE_PORT/docs"
+   {{- end }}
+
+   Frontend:
+   {{- if .Values.frontend.enabled }}
+   export FRONTEND_NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "todo-chat-bot.fullname" . }}-frontend)
+   export FRONTEND_NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+   echo "Frontend: http://$FRONTEND_NODE_IP:$FRONTEND_NODE_PORT"
+   {{- end }}
+
+2. Or use Minikube service command:
+   
+   minikube service {{ include "todo-chat-bot.fullname" . }}-backend
+   minikube service {{ include "todo-chat-bot.fullname" . }}-frontend
+
+3. Check pod status:
+   
+   kubectl get pods -l "app.kubernetes.io/instance={{ .Release.Name }}"
+
+4. View logs:
+   
+   kubectl logs -l "app.kubernetes.io/instance={{ .Release.Name }},app.kubernetes.io/component=backend"
+   kubectl logs -l "app.kubernetes.io/instance={{ .Release.Name }},app.kubernetes.io/component=frontend"
+
+Happy chatting! 🚀

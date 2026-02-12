@@ -1,0 +1,35 @@
+Subject: Request to unblock repository after removing secrets
+
+Hello GitHub Support Team,
+
+I am the owner of the repository:
+https://github.com/AsfaQasim/Hackthone_todoapp_vibecode
+
+My repository is currently blocked from accepting pushes due to secret scanning detection with the error:
+"push declined due to repository rule violations"
+
+I have taken the following remediation steps:
+
+1. Removed all sensitive files (.env files, API keys, JWT secrets) from the codebase
+2. Added comprehensive .gitignore to prevent future commits of sensitive files
+3. Created .env.example files with placeholder values for documentation
+4. Used git-filter-repo to remove secrets from entire git history
+5. All exposed secrets have been rotated and regenerated
+
+The repository now only contains:
+- Application source code
+- Documentation files
+- Example configuration files (no real secrets)
+- Docker deployment configurations
+
+I understand the importance of keeping secrets out of version control and have implemented proper security measures going forward.
+
+Could you please review and unblock my repository so I can push my cleaned codebase?
+
+Repository URL: https://github.com/AsfaQasim/Hackthone_todoapp_vibecode
+GitHub Username: AsfaQasim
+
+Thank you for your assistance.
+
+Best regards,
+Asfaq Asim

@@ -1,0 +1,80 @@
+# AI Chatbot Application - Local Kubernetes Deployment
+replicaCount: 1
+
+backend:
+  enabled: true
+  image:
+    repository: ai-chatbot-backend
+    pullPolicy: Never
+    tag: "latest"
+  service:
+    type: NodePort
+    port: 8000
+    targetPort: 8000
+  env:
+    - name: ENVIRONMENT
+      value: "development"
+    - name: DEBUG
+      value: "true"
+    - name: BETTER_AUTH_SECRET
+      value: ${BETTER_AUTH_SECRET}
+    - name: JWT_SECRET
+      value: ${JWT_SECRET}
+    - name: OPENAI_API_KEY
+      value: ${OPENAI_API_KEY}
+    - name: ALLOWED_ORIGINS
+      value: "http://localhost:3000,http://frontend:3000"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+frontend:
+  enabled: true
+  image:
+    repository: ai-chatbot-frontend
+    pullPolicy: Never
+    tag: "latest"
+  service:
+    type: NodePort
+    port: 3000
+    targetPort: 3000
+  env:
+    - name: NEXT_PUBLIC_API_URL
+      value: "http://todo-chat-bot-backend:8000"
+    - name: NODE_ENV
+      value: "production"
+    - name: ENVIRONMENT
+      value: "development"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+securityContext: {}
+
+ingress:
+  enabled: false
+
+autoscaling:
+  enabled: false
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

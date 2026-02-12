@@ -1,0 +1,30 @@
+Terminal mein ye commands EK-EK karke run karo:
+================================================
+
+Command 1:
+git init
+
+Command 2:
+git remote add origin https://github.com/AsfaQasim/Hackthone_todoapp_vibecode.git
+
+Command 3:
+git remote -v
+
+Command 4:
+git add -A
+
+Command 5:
+git commit -m "feat: Add all phases including phase_04 with Docker setup"
+
+Command 6:
+git branch -M main
+
+Command 7:
+git push -u origin main --force
+
+================================================
+
+Agar koi error aaye to batao, main fix karunga.
+
+Expected Result:
+- GitHub par 4 folders dikhenge: phase_01, phase_02, phase_03, phase_04

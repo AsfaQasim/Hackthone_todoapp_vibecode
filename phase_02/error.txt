@@ -1,0 +1,14 @@
+✓ Compiled / in 2.1s (1478 modules)
+ ⨯ app\page.tsx (9:35) @ useAuth
+ ⨯ TypeError: (0 , _lib_auth_context__WEBPACK_IMPORTED_MODULE_1__.useAuth) is not a function
+    at Home (./app/page.tsx:20:89)
+   7 |
+   8 | export default function Home() {
+>  9 |   const { user, loading } = useAuth();
+     |                                   ^
+  10 |   const router = useRouter();
+  11 |
+  12 |   useEffect(() => {
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+
+

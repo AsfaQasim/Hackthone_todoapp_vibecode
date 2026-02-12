@@ -1,0 +1,324 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+.venv/
+.env
+*.env
+.ENV
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+.envrc
+
+# Dependencies
+node_modules/
+.sass-cache/
+.nyc_output
+.coverage
+coverage/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git/modules/
+
+# Translations
+*.mo
+*.pot
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+.envrc
+.requirements
+requirements-local.txt
+requirements-staging.txt
+requirements-test.txt
+requirements-dev.txt
+requirements-prod.txt
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+.pyre/
+
+# IDE
+.vscode/
+.idea/
+
+# OS generated files
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# Environment variables
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
+.grunt
+
+# Bower dependency directory (https://bower.io/)
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons (https://nodejs.org/api/addons.html)
+build/Release
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# TypeScript v1 declaration files
+typings/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# JSTS generated files
+.js
+.ts
+
+# Sass
+.sass-cache/
+*.css.map
+
+# Optional npm globals
+.node_modules
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler compiled assets
+.cache/
+
+# Next.js build output
+.next/
+
+# Nuxt.js build / generate output
+.nuxt/
+dist/
+
+# Gatsby files
+.cache/
+public
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Docker
+.dockerignore
+Dockerfile*
+
+# FastAPI / Uvicorn
+uvicorn_error.log
+access.log
+error.log
+
+# OpenAI
+openai.log
+
+# SQLAlchemy
+sqlalchemy.log
+
+# Alembic
+alembic.ini
+alembic/
+
+# Neon PostgreSQL
+neon/*
+
+# Secrets and sensitive data
+secrets/
+*.secret
+*.key
+*.pem
+*.crt
+*.cert
+*.private
+*.token
+*.secret-key
+*.env.backup
+*.env.save
+.env.example
+.env.sample
+.env.template
+.env.default
+.env.local
+.env.backup
+.env.save
+.env.dev
+.env.prod
+.env.staging
+.env.test
+.env.testing
+.env.development
+.env.production
+.env.uat
+.env.preprod
+.env.qa
+.env.qc
+.env.integration
+.env.demo
+.env.sandbox
+.env.staging
+.env.preview
+.env.review
+.env.canary
+.env.blue
+.env.green
+.env.alpha
+.env.beta
+.env.gamma
+.env.delta
+.env.epsilon
+.env.zeta
+.env.eta
+.env.theta
+.env.iota
+.env.kappa
+.env.lambda
+.env.mu
+.env.nu
+.env.xi
+.env.omicron
+.env.pi
+.env.rho
+.env.sigma
+.env.tau
+.env.upsilon
+.env.phi
+.env.chi
+.env.psi
+.env.omega
