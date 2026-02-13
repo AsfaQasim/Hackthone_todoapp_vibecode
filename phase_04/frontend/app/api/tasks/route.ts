@@ -67,7 +67,12 @@ export async function GET(request: Request) {
     
     if (!userId) {
       console.warn("No user ID found");
-      return NextResponse.json([], { status: 200 });
+      return NextResponse.json([], { 
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
     }
 
     // Get auth token
@@ -91,22 +96,32 @@ export async function GET(request: Request) {
 
     if (!token) {
       console.warn("No auth token found");
-      return NextResponse.json([], { status: 200 });
+      return NextResponse.json([], { 
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
     }
 
     // Use BACKEND_URL for server-side calls (Docker container-to-container)
     // Falls back to NEXT_PUBLIC_API_URL for local development
     const API_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     
+    console.log('Backend API URL:', API_URL);
+    
     // Fetch tasks from backend
     try {
-      const backendUrl = `${API_URL}/api/${userId}/tasks`;
+      // Backend uses /api/tasks (without user_id in path, gets it from token)
+      const backendUrl = `${API_URL}/api/tasks`;
       console.log(`Fetching tasks from backend: ${backendUrl}`);
       
       const backendResponse = await fetch(backendUrl, {
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
+        cache: 'no-store',
       });
 
       console.log('Backend response status:', backendResponse.status);
@@ -115,19 +130,39 @@ export async function GET(request: Request) {
         const tasks = await backendResponse.json();
         console.log(`✅ Fetched ${tasks.length} tasks from backend`);
         console.log('Tasks:', JSON.stringify(tasks, null, 2));
-        return NextResponse.json(tasks, { status: 200 });
+        return NextResponse.json(tasks, { 
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
       } else {
         const errorText = await backendResponse.text();
         console.error("Backend fetch failed:", backendResponse.status, errorText);
-        return NextResponse.json([], { status: 200 });
+        return NextResponse.json([], { 
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
       }
     } catch (error) {
       console.error('Backend connection failed:', error);
-      return NextResponse.json([], { status: 200 });
+      return NextResponse.json([], { 
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
     }
   } catch (error) {
     console.error('Error fetching tasks:', error);
-    return NextResponse.json([], { status: 200 });
+    return NextResponse.json([], { 
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
   }
 }
 

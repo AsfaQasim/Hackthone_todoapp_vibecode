@@ -111,16 +111,17 @@ def list_tasks(
         # Convert to Task objects - use index-based access for raw SQL results
         tasks = []
         for row in result:
-            # Row columns: id, title, description, status, user_id, created_at, updated_at, completed_at
+            # Row columns based on actual database schema:
+            # 0: title, 1: description, 2: status, 3: id, 4: user_id, 5: created_at, 6: updated_at, 7: completed_at
             task = Task(
-                id=row[0],  # id
-                title=row[1],  # title
-                description=row[2],  # description
-                status=row[3],  # status
-                user_id=row[4],  # user_id
-                created_at=row[5],  # created_at
-                updated_at=row[6],  # updated_at
-                completed_at=row[7]  # completed_at
+                id=row[3],  # id is 4th column (index 3)
+                title=row[0],  # title is 1st column (index 0)
+                description=row[1],  # description is 2nd column (index 1)
+                status=row[2],  # status is 3rd column (index 2)
+                user_id=row[4],  # user_id is 5th column (index 4)
+                created_at=row[5],  # created_at is 6th column (index 5)
+                updated_at=row[6],  # updated_at is 7th column (index 6)
+                completed_at=row[7]  # completed_at is 8th column (index 7)
             )
             tasks.append(task)
         
@@ -182,16 +183,16 @@ def create_task(
         fetch_query = text("SELECT * FROM task WHERE id = :id")
         result = session.execute(fetch_query, {"id": task_id})
         row = result.fetchone()
-        
+
         db_task = Task(
-            id=row[0],
-            title=row[1],
-            description=row[2],
-            status=row[3],
-            user_id=row[4],
-            created_at=row[5],
-            updated_at=row[6],
-            completed_at=row[7]
+            id=row[3],  # id is 4th column (index 3)
+            title=row[0],  # title is 1st column (index 0)
+            description=row[1],  # description is 2nd column (index 1)
+            status=row[2],  # status is 3rd column (index 2)
+            user_id=row[4],  # user_id is 5th column (index 4)
+            created_at=row[5],  # created_at is 6th column (index 5)
+            updated_at=row[6],  # updated_at is 7th column (index 6)
+            completed_at=row[7]  # completed_at is 8th column (index 7)
         )
 
         return db_task
@@ -237,14 +238,14 @@ def get_task(
             )
 
         db_task = Task(
-            id=row[0],
-            title=row[1],
-            description=row[2],
-            status=row[3],
-            user_id=row[4],
-            created_at=row[5],
-            updated_at=row[6],
-            completed_at=row[7]
+            id=row[3],  # id is 4th column (index 3)
+            title=row[0],  # title is 1st column (index 0)
+            description=row[1],  # description is 2nd column (index 1)
+            status=row[2],  # status is 3rd column (index 2)
+            user_id=row[4],  # user_id is 5th column (index 4)
+            created_at=row[5],  # created_at is 6th column (index 5)
+            updated_at=row[6],  # updated_at is 7th column (index 6)
+            completed_at=row[7]  # completed_at is 8th column (index 7)
         )
 
         return db_task
@@ -297,8 +298,14 @@ def update_task(
         if not task_data:
             # No updates provided, return existing task
             return Task(
-                id=row[0], title=row[1], description=row[2], status=row[3],
-                user_id=row[4], created_at=row[5], updated_at=row[6], completed_at=row[7]
+                id=row[3],  # id is 4th column (index 3)
+                title=row[0],  # title is 1st column (index 0)
+                description=row[1],  # description is 2nd column (index 1)
+                status=row[2],  # status is 3rd column (index 2)
+                user_id=row[4],  # user_id is 5th column (index 4)
+                created_at=row[5],  # created_at is 6th column (index 5)
+                updated_at=row[6],  # updated_at is 7th column (index 6)
+                completed_at=row[7]  # completed_at is 8th column (index 7)
             )
         
         # Build SET clause
@@ -318,10 +325,16 @@ def update_task(
         # Fetch updated task
         result = session.execute(check_query, {"task_id": str(task_id), "user_id": user_id})
         row = result.fetchone()
-        
+
         db_task = Task(
-            id=row[0], title=row[1], description=row[2], status=row[3],
-            user_id=row[4], created_at=row[5], updated_at=row[6], completed_at=row[7]
+            id=row[3],  # id is 4th column (index 3)
+            title=row[0],  # title is 1st column (index 0)
+            description=row[1],  # description is 2nd column (index 1)
+            status=row[2],  # status is 3rd column (index 2)
+            user_id=row[4],  # user_id is 5th column (index 4)
+            created_at=row[5],  # created_at is 6th column (index 5)
+            updated_at=row[6],  # updated_at is 7th column (index 6)
+            completed_at=row[7]  # completed_at is 8th column (index 7)
         )
 
         return db_task
@@ -418,7 +431,7 @@ def toggle_task_completion(
             )
 
         # Toggle completion status
-        current_status = row[3]  # status column
+        current_status = row[2]  # status is 3rd column (index 2)
         new_status = TaskStatus.PENDING if current_status == TaskStatus.COMPLETED else TaskStatus.COMPLETED
         completed_at = datetime.utcnow().isoformat() if new_status == TaskStatus.COMPLETED else None
         
@@ -440,10 +453,16 @@ def toggle_task_completion(
         # Fetch updated task
         result = session.execute(check_query, {"task_id": str(task_id), "user_id": user_id})
         row = result.fetchone()
-        
+
         db_task = Task(
-            id=row[0], title=row[1], description=row[2], status=row[3],
-            user_id=row[4], created_at=row[5], updated_at=row[6], completed_at=row[7]
+            id=row[3],  # id is 4th column (index 3)
+            title=row[0],  # title is 1st column (index 0)
+            description=row[1],  # description is 2nd column (index 1)
+            status=row[2],  # status is 3rd column (index 2)
+            user_id=row[4],  # user_id is 5th column (index 4)
+            created_at=row[5],  # created_at is 6th column (index 5)
+            updated_at=row[6],  # updated_at is 7th column (index 6)
+            completed_at=row[7]  # completed_at is 8th column (index 7)
         )
 
         return db_task

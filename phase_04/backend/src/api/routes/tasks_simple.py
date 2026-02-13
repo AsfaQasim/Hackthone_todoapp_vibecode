@@ -15,6 +15,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["tasks"])
 
 
+# OPTIONS handler for CORS preflight
+@router.options("/tasks")
+async def tasks_options():
+    """Handle CORS preflight for tasks endpoint."""
+    return {"message": "OK"}
+
+
+@router.options("/tasks/{task_id}")
+async def task_options(task_id: str):
+    """Handle CORS preflight for individual task endpoint."""
+    return {"message": "OK"}
+
+
 class TaskCreate(BaseModel):
     title: str
     description: Optional[str] = None
@@ -116,7 +129,13 @@ async def list_tasks(
         logger.info(f"📋 Fetching tasks for user: {current_user.email} (ID: {current_user.id})")
         
         # Query tasks for this user
-        query = select(Task).where(Task.user_id == str(current_user.id))
+        # Handle both hyphenated and non-hyphenated UUID formats
+        user_id_str = str(current_user.id)
+        user_id_no_hyphens = user_id_str.replace('-', '')
+        
+        query = select(Task).where(
+            (Task.user_id == user_id_str) | (Task.user_id == user_id_no_hyphens)
+        )
         tasks = db.exec(query).all()
         
         logger.info(f"✅ Found {len(tasks)} tasks")
@@ -128,7 +147,7 @@ async def list_tasks(
                 "id": str(task.id),
                 "title": task.title,
                 "description": task.description,
-                "status": task.status,
+                "status": str(task.status),  # Ensure status is converted to string
                 "user_id": str(task.user_id),
                 "created_at": task.created_at.isoformat() if task.created_at else None,
                 "updated_at": task.updated_at.isoformat() if task.updated_at else None,
@@ -159,12 +178,15 @@ async def create_task(
         logger.info(f"➕ Creating task for user: {current_user.email}")
         logger.info(f"   Title: {task_data.title}")
         
-        # Create the task
+        # Create the task - ensure consistent UUID format with database
+        # The database might store UUIDs without hyphens
+        user_id_for_db = str(current_user.id).replace('-', '')
+        
         new_task = Task(
             title=task_data.title,
             description=task_data.description or "",
             status=TaskStatus.PENDING,
-            user_id=str(current_user.id)
+            user_id=user_id_for_db
         )
         
         db.add(new_task)
@@ -206,11 +228,17 @@ async def update_task(
     try:
         logger.info(f"=" * 60)
         logger.info(f"✏️ Updating task {task_id} for user: {current_user.email}")
+
+        # Find the task - handle both UUID formats
+        user_id_str = str(current_user.id)
+        user_id_no_hyphens = user_id_str.replace('-', '')
         
-        # Find the task
-        query = select(Task).where(Task.id == task_id, Task.user_id == str(current_user.id))
+        query = select(Task).where(
+            Task.id == task_id,
+            (Task.user_id == user_id_str) | (Task.user_id == user_id_no_hyphens)
+        )
         task = db.exec(query).first()
-        
+
         if not task:
             logger.error(f"❌ Task not found: {task_id}")
             raise HTTPException(status_code=404, detail="Task not found")
@@ -222,7 +250,8 @@ async def update_task(
             task.description = task_data.description
         if task_data.status is not None:
             task.status = task_data.status
-            if task_data.status == "completed":
+            # Handle completion status based on the status value
+            if task_data.status == "completed" or task_data.status == TaskStatus.COMPLETED:
                 task.completed_at = datetime.utcnow()
             else:
                 task.completed_at = None
@@ -269,10 +298,16 @@ async def delete_task(
         logger.info(f"=" * 60)
         logger.info(f"🗑️ Deleting task {task_id} for user: {current_user.email}")
         
-        # Find the task
-        query = select(Task).where(Task.id == task_id, Task.user_id == str(current_user.id))
-        task = db.exec(query).first()
+        # Find the task - handle both UUID formats
+        user_id_str = str(current_user.id)
+        user_id_no_hyphens = user_id_str.replace('-', '')
         
+        query = select(Task).where(
+            Task.id == task_id,
+            (Task.user_id == user_id_str) | (Task.user_id == user_id_no_hyphens)
+        )
+        task = db.exec(query).first()
+
         if not task:
             logger.error(f"❌ Task not found: {task_id}")
             raise HTTPException(status_code=404, detail="Task not found")

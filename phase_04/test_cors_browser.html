@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CORS Test</title>
+</head>
+<body>
+    <h1>Testing CORS from Browser</h1>
+    <button onclick="testCORS()">Test Backend Connection</button>
+    <pre id="output"></pre>
+
+    <script>
+        async function testCORS() {
+            const output = document.getElementById('output');
+            output.textContent = 'Testing...\n';
+
+            try {
+                // Test 1: Health endpoint
+                output.textContent += '\n1. Testing /health endpoint...\n';
+                const healthResponse = await fetch('http://localhost:8000/health');
+                const healthData = await healthResponse.json();
+                output.textContent += `   Status: ${healthResponse.status}\n`;
+                output.textContent += `   Response: ${JSON.stringify(healthData)}\n`;
+
+                // Test 2: Tasks endpoint without auth
+                output.textContent += '\n2. Testing /api/tasks (no auth)...\n';
+                const tasksResponse = await fetch('http://localhost:8000/api/tasks');
+                const tasksData = await tasksResponse.json();
+                output.textContent += `   Status: ${tasksResponse.status}\n`;
+                output.textContent += `   Response: ${JSON.stringify(tasksData)}\n`;
+
+                // Test 3: Tasks endpoint with fake token
+                output.textContent += '\n3. Testing /api/tasks (with fake token)...\n';
+                const authResponse = await fetch('http://localhost:8000/api/tasks', {
+                    headers: {
+                        'Authorization': 'Bearer fake-token'
+                    }
+                });
+                const authData = await authResponse.json();
+                output.textContent += `   Status: ${authResponse.status}\n`;
+                output.textContent += `   Response: ${JSON.stringify(authData)}\n`;
+
+                output.textContent += '\n✅ CORS is working! No errors in console.\n';
+            } catch (error) {
+                output.textContent += `\n❌ ERROR: ${error.message}\n`;
+                output.textContent += 'Check browser console for CORS errors.\n';
+            }
+        }
+    </script>
+</body>
+</html>

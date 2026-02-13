@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend-Backend Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #4a9eff;
+        }
+        .success {
+            border-left-color: #4ade80;
+        }
+        .error {
+            border-left-color: #f87171;
+        }
+        button {
+            background: #4a9eff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #3a8eef;
+        }
+        .log {
+            background: #1a1a1a;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin-left: 10px;
+        }
+        .status.success {
+            background: #4ade80;
+            color: #000;
+        }
+        .status.error {
+            background: #f87171;
+            color: #000;
+        }
+        .status.pending {
+            background: #fbbf24;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Frontend-Backend Connection Test</h1>
+    <p>This page tests the connection between frontend and backend to diagnose CORS issues.</p>
+
+    <div class="test-section" id="test1">
+        <h2>Test 1: Backend Health Check</h2>
+        <p>Testing if backend is running on http://localhost:8000</p>
+        <button onclick="testBackendHealth()">Run Test</button>
+        <span class="status pending" id="status1">Not tested</span>
+        <div class="log" id="log1"></div>
+    </div>
+
+    <div class="test-section" id="test2">
+        <h2>Test 2: Direct Backend API Call (Will cause CORS error)</h2>
+        <p>Testing direct call to backend API - this SHOULD fail with CORS error</p>
+        <button onclick="testDirectBackendCall()">Run Test</button>
+        <span class="status pending" id="status2">Not tested</span>
+        <div class="log" id="log2"></div>
+    </div>
+
+    <div class="test-section" id="test3">
+        <h2>Test 3: Next.js API Proxy (Should work)</h2>
+        <p>Testing call through Next.js API route - this SHOULD work</p>
+        <button onclick="testNextJSProxy()">Run Test</button>
+        <span class="status pending" id="status3">Not tested</span>
+        <div class="log" id="log3"></div>
+    </div>
+
+    <div class="test-section" id="test4">
+        <h2>Test 4: CORS Preflight Check</h2>
+        <p>Testing CORS preflight (OPTIONS) request</p>
+        <button onclick="testCORSPreflight()">Run Test</button>
+        <span class="status pending" id="status4">Not tested</span>
+        <div class="log" id="log4"></div>
+    </div>
+
+    <button onclick="runAllTests()" style="background: #10b981; font-size: 16px; padding: 15px 30px;">
+        🚀 Run All Tests
+    </button>
+
+    <script>
+        function log(testId, message, isError = false) {
+            const logDiv = document.getElementById(`log${testId}`);
+            const timestamp = new Date().toLocaleTimeString();
+            const color = isError ? '#f87171' : '#4ade80';
+            logDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function setStatus(testId, status, message) {
+            const statusSpan = document.getElementById(`status${testId}`);
+            statusSpan.className = `status ${status}`;
+            statusSpan.textContent = message;
+            
+            const section = document.getElementById(`test${testId}`);
+            section.className = `test-section ${status}`;
+        }
+
+        async function testBackendHealth() {
+            const testId = 1;
+            document.getElementById(`log${testId}`).innerHTML = '';
+            log(testId, 'Testing backend health...');
+            setStatus(testId, 'pending', 'Testing...');
+
+            try {
+                const response = await fetch('http://localhost:8000/health');
+                const data = await response.json();
+                
+                log(testId, `✅ Backend is running!`);
+                log(testId, `Status: ${response.status}`);
+                log(testId, `Response: ${JSON.stringify(data)}`);
+                setStatus(testId, 'success', 'Backend is running ✅');
+            } catch (error) {
+                log(testId, `❌ Backend connection failed: ${error.message}`, true);
+                log(testId, 'Make sure backend is running: cd backend && python main.py', true);
+                setStatus(testId, 'error', 'Backend not running ❌');
+            }
+        }
+
+        async function testDirectBackendCall() {
+            const testId = 2;
+            document.getElementById(`log${testId}`).innerHTML = '';
+            log(testId, 'Testing direct backend API call...');
+            log(testId, 'This SHOULD fail with CORS error (expected behavior)');
+            setStatus(testId, 'pending', 'Testing...');
+
+            try {
+                const response = await fetch('http://localhost:8000/api/tasks', {
+                    headers: {
+                        'Authorization': 'Bearer fake-token-for-testing'
+                    }
+                });
+                
+                log(testId, `⚠️ Unexpected: Direct call succeeded!`);
+                log(testId, `Status: ${response.status}`);
+                log(testId, 'This means CORS is too permissive or browser is not enforcing it');
+                setStatus(testId, 'success', 'Call succeeded (unexpected)');
+            } catch (error) {
+                log(testId, `✅ Expected CORS error: ${error.message}`);
+                log(testId, 'This is correct! Direct calls should be blocked.');
+                setStatus(testId, 'success', 'CORS working correctly ✅');
+            }
+        }
+
+        async function testNextJSProxy() {
+            const testId = 3;
+            document.getElementById(`log${testId}`).innerHTML = '';
+            log(testId, 'Testing Next.js API proxy...');
+            setStatus(testId, 'pending', 'Testing...');
+
+            try {
+                const response = await fetch('/api/health');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(testId, `✅ Next.js proxy working!`);
+                    log(testId, `Status: ${response.status}`);
+                    log(testId, `Response: ${JSON.stringify(data)}`);
+                    setStatus(testId, 'success', 'Proxy working ✅');
+                } else {
+                    log(testId, `⚠️ Proxy returned error: ${response.status}`, true);
+                    setStatus(testId, 'error', `Error ${response.status}`);
+                }
+            } catch (error) {
+                log(testId, `❌ Proxy call failed: ${error.message}`, true);
+                log(testId, 'Make sure frontend is running: cd frontend && npm run dev', true);
+                setStatus(testId, 'error', 'Proxy not working ❌');
+            }
+        }
+
+        async function testCORSPreflight() {
+            const testId = 4;
+            document.getElementById(`log${testId}`).innerHTML = '';
+            log(testId, 'Testing CORS preflight (OPTIONS)...');
+            setStatus(testId, 'pending', 'Testing...');
+
+            try {
+                const response = await fetch('http://localhost:8000/api/tasks', {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': 'http://localhost:3000',
+                        'Access-Control-Request-Method': 'GET',
+                        'Access-Control-Request-Headers': 'authorization,content-type'
+                    }
+                });
+                
+                log(testId, `Status: ${response.status}`);
+                
+                const corsHeaders = {};
+                response.headers.forEach((value, key) => {
+                    if (key.toLowerCase().startsWith('access-control')) {
+                        corsHeaders[key] = value;
+                    }
+                });
+                
+                if (Object.keys(corsHeaders).length > 0) {
+                    log(testId, `✅ CORS headers present:`);
+                    Object.entries(corsHeaders).forEach(([key, value]) => {
+                        log(testId, `  ${key}: ${value}`);
+                    });
+                    setStatus(testId, 'success', 'CORS configured ✅');
+                } else {
+                    log(testId, `❌ No CORS headers found!`, true);
+                    setStatus(testId, 'error', 'CORS not configured ❌');
+                }
+            } catch (error) {
+                log(testId, `❌ Preflight test failed: ${error.message}`, true);
+                setStatus(testId, 'error', 'Test failed ❌');
+            }
+        }
+
+        async function runAllTests() {
+            await testBackendHealth();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testDirectBackendCall();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testNextJSProxy();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testCORSPreflight();
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            setTimeout(runAllTests, 500);
+        });
+    </script>
+</body>
+</html>

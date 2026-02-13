@@ -62,17 +62,23 @@ app = FastAPI(
 # Middleware
 # ==============================
 
+# CORS configuration - must be FIRST middleware added
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins.split(","),
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
+
+print("✅ CORS Middleware added with allow_origins=['*']")
 
 app.middleware("http")(log_request_middleware)
 app.middleware("http")(auth_middleware)
-app.add_middleware(JsonResponseMiddleware)
+# Removed JsonResponseMiddleware as it was stripping CORS headers
+# app.add_middleware(JsonResponseMiddleware)
 
 # ==============================
 # Exception Handlers
@@ -87,8 +93,8 @@ app.add_exception_handler(Exception, general_exception_handler)
 # ==============================
 
 app.include_router(auth_router)
+app.include_router(tasks_simple_router)  # Simplified tasks endpoint (no user_id in path) - include first to avoid conflicts
 app.include_router(tasks_router)
-app.include_router(tasks_simple_router)  # Simplified tasks endpoint (no user_id in path)
 app.include_router(tasks_by_email_router)  # Simple tasks by email
 app.include_router(chat_router)  # Chat router already has /api prefix
 

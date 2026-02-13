@@ -54,25 +54,40 @@ export default function GeneralTaskExecutionPage() {
       const token = authTokenRow ? authTokenRow.split('=')[1] : null;
 
       console.log('Auth token found:', !!token);
+      console.log('Token format check:', token ? (token.split('.').length === 3 ? 'Valid JWT format' : 'Invalid JWT format') : 'No token');
 
       if (!token) {
         setError('Authentication required. Please log in.');
         setLoading(false);
         return;
       }
+      
+      // Validate JWT format
+      if (token.split('.').length !== 3) {
+        setError('Invalid authentication token format. Please log in again.');
+        setLoading(false);
+        return;
+      }
 
       console.log('Fetching tasks from backend API...');
+      console.log('Token being sent:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
 
-      // Use Next.js API proxy instead of direct backend call
-      const response = await fetch('/api/tasks', {
+      // Direct backend call for debugging
+      const BACKEND_URL = 'http://localhost:8000';
+      console.log('Fetching from:', `${BACKEND_URL}/api/tasks`);
+      
+      const response = await fetch(`${BACKEND_URL}/api/tasks`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
         cache: 'no-store',
+        mode: 'cors', // Explicitly set CORS mode
       });
 
       console.log('API response status:', response.status);
+      console.log('API response headers:', Object.fromEntries(response.headers.entries()));
 
       if (response.ok) {
         const tasks = await response.json();
@@ -81,12 +96,23 @@ export default function GeneralTaskExecutionPage() {
       } else {
         const errorText = await response.text();
         console.error('API fetch failed:', response.status, errorText);
-        setError(`Failed to fetch tasks: ${response.status}`);
+        setError(`Failed to fetch tasks: ${response.status} - ${errorText.substring(0, 100)}`);
         setTasks([]);
       }
     } catch (error: any) {
       console.error('Error loading tasks:', error);
-      setError(error.message || 'Failed to load tasks');
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      
+      // More specific error messages
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        setError('Cannot connect to backend server. Make sure it is running on http://localhost:8000');
+      } else if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
+        setError('Network error: Cannot reach backend server. Check if backend is running and CORS is configured.');
+      } else {
+        setError(error.message || 'Failed to load tasks');
+      }
       setTasks([]);
     } finally {
       setLoading(false);
@@ -104,7 +130,7 @@ export default function GeneralTaskExecutionPage() {
         return;
       }
 
-      const response = await fetch(`/api/tasks/${taskId}`, {
+      const response = await fetch(`http://localhost:8000/api/tasks/${taskId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -144,7 +170,7 @@ export default function GeneralTaskExecutionPage() {
         task.id === taskId ? { ...task, status: newStatus } : task
       ));
 
-      const response = await fetch(`/api/tasks/${taskId}`, {
+      const response = await fetch(`http://localhost:8000/api/tasks/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

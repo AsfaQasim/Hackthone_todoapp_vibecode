@@ -1,167 +1,192 @@
-"""Debug why tasks are not showing in AI Tasks page"""
+#!/usr/bin/env python3
+"""Debug script to test the tasks endpoint and identify the issue."""
+
+import os
+import sys
+from pathlib import Path
 import requests
 import json
+import uuid
 
-BACKEND_URL = "http://localhost:8000"
+# Add backend to path
+backend_path = Path(__file__).parent / "backend"
+sys.path.insert(0, str(backend_path))
+sys.path.insert(0, str(backend_path / "src"))
 
-print("=" * 80)
-print("🔍 DEBUGGING AI TASKS ISSUE")
-print("=" * 80)
+# Change to backend directory so config can be imported
+original_cwd = os.getcwd()
+os.chdir(str(backend_path))
 
-# Step 1: Login
-print("\n1️⃣ Logging in...")
-try:
-    response = requests.post(
-        f"{BACKEND_URL}/login",
-        json={"email": "asfaqasim145@gmail.com", "password": "test123"},
-        headers={"Content-Type": "application/json"}
-    )
+from src.db import engine, init_db
+from sqlalchemy import text
+from src.models.base_models import Task, User, TaskStatus
+from sqlmodel import Session, select
+
+def test_database_connection():
+    """Test database connection and check for tasks."""
+    print("=" * 80)
+    print("TESTING DATABASE CONNECTION")
+    print("=" * 80)
     
-    if response.status_code == 200:
-        data = response.json()
-        token = data.get("token") or data.get("access_token")
-        user_id = data.get("user_id")
+    try:
+        # Initialize database
+        init_db()
+        print("Database initialized successfully")
         
-        print(f"   ✅ Login successful!")
-        print(f"   User ID: {user_id}")
-        print(f"   Token: {token[:30]}...")
-    else:
-        print(f"   ❌ Login failed: {response.status_code}")
-        print(f"   Response: {response.text}")
-        exit(1)
-except Exception as e:
-    print(f"   ❌ Login error: {e}")
-    exit(1)
+        # Connect to database
+        with Session(engine) as session:
+            # Count users
+            user_count = session.exec(select(User)).all()
+            print(f"Users in database: {len(user_count)}")
+            
+            # Count tasks
+            task_count = session.exec(select(Task)).all()
+            print(f"Tasks in database: {len(task_count)}")
+            
+            if task_count:
+                print("\nSample tasks:")
+                for i, task in enumerate(task_count[:3]):  # Show first 3 tasks
+                    print(f"  {i+1}. ID: {task.id}")
+                    print(f"     Title: {task.title}")
+                    print(f"     Status: {task.status}")
+                    print(f"     User ID: {task.user_id}")
+                    print(f"     Created: {task.created_at}")
+                    print()
+            
+            # Check for any user
+            if user_count:
+                sample_user = user_count[0]
+                print(f"Sample user: {sample_user.email} (ID: {sample_user.id})")
+                
+                # Check tasks for this user
+                user_tasks = session.exec(select(Task).where(Task.user_id == str(sample_user.id))).all()
+                print(f"Tasks for this user: {len(user_tasks)}")
+                
+    except Exception as e:
+        print(f"Database test failed: {e}")
+        import traceback
+        traceback.print_exc()
 
-# Step 2: Get tasks from backend directly
-print("\n2️⃣ Getting tasks from backend...")
-try:
-    response = requests.get(
-        f"{BACKEND_URL}/api/{user_id}/tasks",
-        headers={"Authorization": f"Bearer {token}"}
-    )
-    
-    print(f"   Status: {response.status_code}")
-    
-    if response.status_code == 200:
-        tasks = response.json()
-        print(f"   ✅ Backend returned {len(tasks)} tasks")
-        
-        if len(tasks) > 0:
-            print(f"\n   📋 Tasks in backend:")
-            for i, task in enumerate(tasks[:5], 1):
-                print(f"      {i}. {task.get('title')} (Status: {task.get('status')})")
-                print(f"         ID: {task.get('id')}")
-                print(f"         User ID: {task.get('user_id')}")
-        else:
-            print(f"   ⚠️  No tasks found in backend!")
-            print(f"   Let's create one...")
-    else:
-        print(f"   ❌ Backend returned error: {response.status_code}")
-        print(f"   Response: {response.text}")
-        
-except Exception as e:
-    print(f"   ❌ Error: {e}")
-    import traceback
-    traceback.print_exc()
 
-# Step 3: Create a test task
-print("\n3️⃣ Creating a test task via chat...")
-try:
-    response = requests.post(
-        f"{BACKEND_URL}/api/{user_id}/chat",
-        json={"message": "add task: Debug test task"},
-        headers={
+def test_backend_endpoints():
+    """Test backend endpoints directly."""
+    print("\n" + "=" * 80)
+    print("TESTING BACKEND ENDPOINTS")
+    print("=" * 80)
+    
+    # Try to get a valid token by creating a test user programmatically
+    try:
+        from src.services.auth_service import create_access_token
+        from src.db import get_db
+        
+        # Create a test user
+        with Session(engine) as session:
+            # Check if test user already exists
+            test_user = session.exec(select(User).where(User.email == "test@example.com")).first()
+            
+            if not test_user:
+                # Create a new test user
+                test_user = User(email="test@example.com", name="Test User")
+                session.add(test_user)
+                session.commit()
+                session.refresh(test_user)
+                print(f"Created test user: {test_user.email}")
+            else:
+                print(f"Found existing test user: {test_user.email}")
+        
+        # Create a token for the test user
+        token_payload = {
+            "sub": str(test_user.id),
+            "email": test_user.email,
+            "name": test_user.name
+        }
+        token = create_access_token(token_payload)
+        print(f"Generated test token: {token[:30]}...")
+        
+        # Test the tasks endpoint
+        headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
         }
-    )
-    
-    if response.status_code == 200:
-        data = response.json()
-        print(f"   ✅ Chat response: {data.get('response')}")
         
-        if data.get('tool_calls'):
-            for tool in data['tool_calls']:
-                result = tool.get('result', {})
-                if result.get('success'):
-                    print(f"   ✅ Task created successfully!")
-                    task_data = result.get('data', {})
-                    print(f"      Task ID: {task_data.get('id')}")
-                    print(f"      Title: {task_data.get('title')}")
-    else:
-        print(f"   ❌ Chat failed: {response.status_code}")
-        print(f"   Response: {response.text[:500]}")
+        print(f"\nTesting GET /api/tasks endpoint...")
+        response = requests.get("http://localhost:8000/api/tasks", headers=headers)
+        print(f"Response status: {response.status_code}")
+        print(f"Response headers: {dict(response.headers)}")
         
-except Exception as e:
-    print(f"   ❌ Error: {e}")
-
-# Step 4: Get tasks again
-print("\n4️⃣ Getting tasks again...")
-try:
-    response = requests.get(
-        f"{BACKEND_URL}/api/{user_id}/tasks",
-        headers={"Authorization": f"Bearer {token}"}
-    )
-    
-    if response.status_code == 200:
-        tasks = response.json()
-        print(f"   ✅ Backend now has {len(tasks)} tasks")
-        
-        if len(tasks) > 0:
-            print(f"\n   📋 Latest tasks:")
-            for i, task in enumerate(tasks[-3:], 1):
-                print(f"      {i}. {task.get('title')}")
-                print(f"         ID: {task.get('id')}")
-                print(f"         User ID: {task.get('user_id')}")
-                print(f"         Status: {task.get('status')}")
-    else:
-        print(f"   ❌ Error: {response.status_code}")
-        
-except Exception as e:
-    print(f"   ❌ Error: {e}")
-
-# Step 5: Test frontend API route
-print("\n5️⃣ Testing frontend API route...")
-try:
-    response = requests.get(
-        "http://localhost:3000/api/tasks",
-        headers={"Authorization": f"Bearer {token}"},
-        cookies={"auth_token": token}
-    )
-    
-    print(f"   Status: {response.status_code}")
-    
-    if response.status_code == 200:
-        tasks = response.json()
-        print(f"   ✅ Frontend API returned {len(tasks)} tasks")
-        
-        if len(tasks) > 0:
-            print(f"\n   📋 Tasks from frontend API:")
-            for i, task in enumerate(tasks[:3], 1):
-                print(f"      {i}. {task.get('title')}")
+        if response.status_code == 200:
+            tasks = response.json()
+            print(f"Successfully fetched {len(tasks)} tasks")
+            for i, task in enumerate(tasks[:3]):
+                print(f"  {i+1}. {task.get('title', 'No title')} - {task.get('status', 'No status')}")
         else:
-            print(f"   ⚠️  Frontend API returned 0 tasks!")
-            print(f"   This is the problem!")
-    else:
-        print(f"   ❌ Frontend API error: {response.status_code}")
-        print(f"   Response: {response.text[:500]}")
+            print(f"Failed to fetch tasks: {response.text}")
         
-except Exception as e:
-    print(f"   ❌ Error: {e}")
-    import traceback
-    traceback.print_exc()
+        # Test creating a task
+        print(f"\nTesting POST /api/tasks endpoint...")
+        new_task_data = {
+            "title": "Test task from debug script",
+            "description": "Created during debugging"
+        }
+        response = requests.post(
+            "http://localhost:8000/api/tasks", 
+            headers=headers, 
+            json=new_task_data
+        )
+        print(f"Create task response status: {response.status_code}")
+        
+        if response.status_code in [200, 201]:
+            created_task = response.json()
+            print(f"Created task: {created_task.get('title', 'Unknown')}")
+        else:
+            print(f"Failed to create task: {response.text}")
+            
+    except Exception as e:
+        print(f"Endpoint test failed: {e}")
+        import traceback
+        traceback.print_exc()
 
-print("\n" + "=" * 80)
-print("📊 SUMMARY")
-print("=" * 80)
-print("\n✅ If backend has tasks but frontend API returns 0:")
-print("   Problem: Frontend API route not connecting to backend properly")
-print("   Solution: Check frontend/.env.local has NEXT_PUBLIC_API_URL=http://localhost:8000")
-print("\n✅ If backend has 0 tasks:")
-print("   Problem: Tasks not being created")
-print("   Solution: Check backend logs for errors")
-print("\n✅ If frontend API has tasks:")
-print("   Problem: Frontend page not refreshing")
-print("   Solution: Hard refresh browser (Ctrl+Shift+R)")
-print("=" * 80)
+
+def check_route_conflicts():
+    """Check for route conflicts."""
+    print("\n" + "=" * 80)
+    print("CHECKING FOR ROUTE CONFLICTS")
+    print("=" * 80)
+    
+    try:
+        from main import app
+        routes = []
+        for route in app.routes:
+            if hasattr(route, 'methods') and hasattr(route, 'path'):
+                routes.append({
+                    'path': route.path,
+                    'methods': list(route.methods) if isinstance(route.methods, set) else route.methods
+                })
+        
+        print("Registered routes:")
+        for route in sorted(routes, key=lambda x: x['path']):
+            print(f"  {route['methods']} {route['path']}")
+        
+        # Check for conflicting routes
+        api_routes = [r for r in routes if '/api' in r['path']]
+        print(f"\nAPI routes found: {len(api_routes)}")
+        
+        # Look for potential conflicts
+        tasks_routes = [r for r in api_routes if 'tasks' in r['path']]
+        print(f"Tasks-related routes: {len(tasks_routes)}")
+        for route in tasks_routes:
+            print(f"  {route['methods']} {route['path']}")
+            
+    except Exception as e:
+        print(f"Route check failed: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+if __name__ == "__main__":
+    test_database_connection()
+    test_backend_endpoints()
+    check_route_conflicts()
+    
+    # Change back to original directory
+    os.chdir(original_cwd)

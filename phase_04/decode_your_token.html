@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Your Token</title>
+    <style>
+        body { font-family: Arial; padding: 20px; max-width: 900px; margin: 0 auto; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; font-size: 16px; }
+        .error { background: #f44336; color: white; }
+        .success { background: #4CAF50; color: white; }
+        .warning { background: #ff9800; color: white; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .step { background: #e3f2fd; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Check Your Current Token</h1>
+    
+    <div class="step">
+        <h2>Step 1: Check Current Token</h2>
+        <button onclick="checkToken()" class="warning">Check My Token</button>
+        <div id="tokenInfo"></div>
+    </div>
+    
+    <div class="step">
+        <h2>Step 2: Clear Old Token</h2>
+        <button onclick="clearEverything()" class="error">Clear Everything</button>
+        <div id="clearStatus"></div>
+    </div>
+    
+    <div class="step">
+        <h2>Step 3: Login Fresh</h2>
+        <input type="email" id="email" value="asfaqasim145@gmail.com" style="padding: 8px; width: 300px;"><br>
+        <input type="password" id="password" placeholder="Enter password" style="padding: 8px; width: 300px; margin-top: 5px;"><br>
+        <button onclick="loginFresh()" class="success" style="margin-top: 5px;">Login Now</button>
+        <div id="loginInfo"></div>
+    </div>
+    
+    <h2>Output:</h2>
+    <pre id="output"></pre>
+
+    <script>
+        const output = document.getElementById('output');
+
+        function checkToken() {
+            output.textContent = 'Checking current token...\n\n';
+            
+            // Get all cookies
+            const cookies = document.cookie.split('; ');
+            output.textContent += 'All cookies:\n' + document.cookie + '\n\n';
+            
+            // Find auth_token
+            const authCookie = cookies.find(row => row.startsWith('auth_token='));
+            
+            if (authCookie) {
+                const token = authCookie.split('=')[1];
+                output.textContent += '✅ Found auth_token cookie\n';
+                output.textContent += 'Token: ' + token.substring(0, 50) + '...\n\n';
+                
+                // Decode token
+                try {
+                    const parts = token.split('.');
+                    if (parts.length === 3) {
+                        const payload = JSON.parse(atob(parts[1]));
+                        output.textContent += 'Token Payload:\n';
+                        output.textContent += JSON.stringify(payload, null, 2) + '\n\n';
+                        
+                        // Check expiration
+                        const exp = payload.exp * 1000;
+                        const now = Date.now();
+                        if (exp < now) {
+                            output.textContent += '❌ TOKEN IS EXPIRED!\n';
+                            output.textContent += 'Expired: ' + new Date(exp).toLocaleString() + '\n';
+                            document.getElementById('tokenInfo').innerHTML = '<p style="color: red;">❌ Your token is EXPIRED!</p>';
+                        } else {
+                            output.textContent += '✅ Token is not expired\n';
+                            output.textContent += 'Expires: ' + new Date(exp).toLocaleString() + '\n';
+                            document.getElementById('tokenInfo').innerHTML = '<p style="color: orange;">⚠️ Token exists but may be signed with wrong secret</p>';
+                        }
+                    }
+                } catch (e) {
+                    output.textContent += '❌ Error decoding token: ' + e.message + '\n';
+                    document.getElementById('tokenInfo').innerHTML = '<p style="color: red;">❌ Invalid token format!</p>';
+                }
+            } else {
+                output.textContent += '❌ No auth_token cookie found!\n';
+                document.getElementById('tokenInfo').innerHTML = '<p style="color: red;">❌ No token found - you need to login!</p>';
+            }
+        }
+
+        function clearEverything() {
+            output.textContent += '\n\n=== CLEARING EVERYTHING ===\n';
+            
+            // Clear all cookies
+            const cookies = document.cookie.split(";");
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i];
+                const eqPos = cookie.indexOf("=");
+                const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+                document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+            }
+            
+            // Clear storage
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            output.textContent += '✅ All cookies cleared\n';
+            output.textContent += '✅ localStorage cleared\n';
+            output.textContent += '✅ sessionStorage cleared\n';
+            
+            document.getElementById('clearStatus').innerHTML = '<p style="color: green;">✅ Everything cleared!</p>';
+            
+            // Verify
+            setTimeout(() => {
+                output.textContent += '\nVerifying...\n';
+                output.textContent += 'Cookies now: ' + (document.cookie || 'EMPTY') + '\n';
+            }, 500);
+        }
+
+        async function loginFresh() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!password) {
+                alert('Please enter password!');
+                return;
+            }
+            
+            output.textContent += '\n\n=== LOGGING IN ===\n';
+            document.getElementById('loginInfo').innerHTML = '<p>Logging in...</p>';
+            
+            try {
+                // Call frontend API which proxies to backend
+                const response = await fetch('http://localhost:3000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                output.textContent += 'Status: ' + response.status + '\n';
+                output.textContent += 'Response: ' + JSON.stringify(data, null, 2) + '\n';
+                
+                if (data.token || data.access_token) {
+                    const token = data.token || data.access_token;
+                    
+                    // Set cookie manually
+                    document.cookie = `auth_token=${token}; path=/; max-age=86400`;
+                    
+                    output.textContent += '\n✅ Token received and saved!\n';
+                    output.textContent += 'Token: ' + token.substring(0, 50) + '...\n';
+                    
+                    document.getElementById('loginInfo').innerHTML = '<p style="color: green;">✅ Login successful! Now go to /general-task-execution</p>';
+                    
+                    // Decode new token
+                    const parts = token.split('.');
+                    if (parts.length === 3) {
+                        const payload = JSON.parse(atob(parts[1]));
+                        output.textContent += '\nNew Token Payload:\n';
+                        output.textContent += JSON.stringify(payload, null, 2) + '\n';
+                    }
+                    
+                    output.textContent += '\n✅ NOW GO TO: http://localhost:3000/general-task-execution\n';
+                } else {
+                    output.textContent += '\n❌ No token in response!\n';
+                    document.getElementById('loginInfo').innerHTML = '<p style="color: red;">❌ Login failed - no token</p>';
+                }
+            } catch (error) {
+                output.textContent += '\n❌ Error: ' + error.message + '\n';
+                document.getElementById('loginInfo').innerHTML = '<p style="color: red;">❌ Error: ' + error.message + '</p>';
+            }
+        }
+
+        // Auto-check on load
+        window.onload = checkToken;
+    </script>
+</body>
+</html>

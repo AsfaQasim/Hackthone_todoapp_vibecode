@@ -17,6 +17,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["chat"])
 
 
+# OPTIONS handler for CORS preflight
+@router.options("/{user_id}/chat")
+async def chat_options(user_id: str):
+    """Handle CORS preflight for chat endpoint."""
+    return {"message": "OK"}
+
+
 class ChatRequest(BaseModel):
     message: str
     conversation_id: Optional[str] = None
@@ -147,13 +154,8 @@ async def chat_simple(
         logger.info(f"👤 Authenticated user: {current_user.email} (ID: {current_user.id})")
         
         # Use authenticated user's ID (from token) instead of path parameter
-        # TEMPORARY FIX: Use hardcoded user ID for asfaqasim145@gmail.com
-        if current_user.email == "asfaqasim145@gmail.com":
-            actual_user_id = "add60fd1-792f-4ab9-9a53-e2f859482c59"
-            logger.info(f"🔧 Using hardcoded user ID for {current_user.email}: {actual_user_id}")
-        else:
-            actual_user_id = str(current_user.id)
-        
+        actual_user_id = str(current_user.id)
+
         logger.info(f"🔑 Using user ID: {actual_user_id}")
         
         # Generate conversation ID if not provided
@@ -197,12 +199,15 @@ async def chat_simple(
                     VALUES (:id, :title, :description, :status, :user_id, :created_at, :updated_at)
                 """)
                 
+                # Ensure consistent UUID format - remove hyphens to match database format
+                user_id_for_db = actual_user_id.replace('-', '') if isinstance(actual_user_id, str) else str(actual_user_id).replace('-', '')
+                
                 db.execute(query_text, {
                     "id": task_id,
                     "title": task_title or "New Task",
                     "description": "Created via AI Assistant",
                     "status": "pending",  # Use status string instead of completed boolean
-                    "user_id": actual_user_id,
+                    "user_id": user_id_for_db,
                     "created_at": now,
                     "updated_at": now
                 })
@@ -214,15 +219,15 @@ async def chat_simple(
                 result = db.execute(fetch_query, {"id": task_id})
                 row = result.fetchone()
                 
-                # Map columns correctly
+                # Map columns correctly based on actual database schema:
                 new_task = Task(
-                    id=row[0],  # id is 1st column
-                    title=row[1],  # title is 2nd column
-                    description=row[2],  # description is 3rd column
-                    status=row[3],  # status is 4th column
-                    user_id=row[4],  # user_id is 5th column
-                    created_at=row[5],  # created_at is 6th column
-                    updated_at=row[6],  # updated_at is 7th column
+                    id=row[3],  # id is 4th column (index 3)
+                    title=row[0],  # title is 1st column (index 0)
+                    description=row[1],  # description is 2nd column (index 1)
+                    status=row[2],  # status is 3rd column (index 2)
+                    user_id=row[4],  # user_id is 5th column (index 4)
+                    created_at=row[5],  # created_at is 6th column (index 5)
+                    updated_at=row[6],  # updated_at is 7th column (index 6)
                     completed_at=None
                 )
                 
@@ -354,12 +359,15 @@ async def chat_simple(
                             VALUES (:id, :title, :description, :status, :user_id, :created_at, :updated_at)
                         """)
                         
+                        # Ensure consistent UUID format - remove hyphens to match database format
+                        user_id_for_db = actual_user_id.replace('-', '') if isinstance(actual_user_id, str) else str(actual_user_id).replace('-', '')
+                        
                         db.execute(query_text, {
                             "id": task_id,
                             "title": task_title,
                             "description": "Created via AI Assistant",
                             "status": "pending",  # Use status string instead of completed boolean
-                            "user_id": actual_user_id,
+                            "user_id": user_id_for_db,
                             "created_at": now,
                             "updated_at": now
                         })
@@ -370,15 +378,15 @@ async def chat_simple(
                         result = db.execute(fetch_query, {"id": task_id})
                         row = result.fetchone()
                         
-                        # Map columns correctly: id, title, description, status, user_id, created_at, updated_at
+                        # Map columns correctly based on actual database schema:
                         new_task = Task(
-                            id=row[0],  # id is 1st column
-                            title=row[1],  # title is 2nd column
-                            description=row[2],  # description is 3rd column
-                            status=row[3],  # status is 4th column
-                            user_id=row[4],  # user_id is 5th column
-                            created_at=row[5],  # created_at is 6th column
-                            updated_at=row[6],  # updated_at is 7th column
+                            id=row[3],  # id is 4th column (index 3)
+                            title=row[0],  # title is 1st column (index 0)
+                            description=row[1],  # description is 2nd column (index 1)
+                            status=row[2],  # status is 3rd column (index 2)
+                            user_id=row[4],  # user_id is 5th column (index 4)
+                            created_at=row[5],  # created_at is 6th column (index 5)
+                            updated_at=row[6],  # updated_at is 7th column (index 6)
                             completed_at=None
                         )
                         

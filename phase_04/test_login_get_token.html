@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Login & Get Token</title>
+</head>
+<body>
+    <h1>Test Login & Get Token</h1>
+    
+    <div>
+        <h2>1. Login</h2>
+        <input type="email" id="email" value="asfaqasim145@gmail.com" placeholder="Email">
+        <input type="password" id="password" value="test123" placeholder="Password">
+        <button onclick="login()">Login</button>
+    </div>
+    
+    <div>
+        <h2>2. Test Tasks API</h2>
+        <button onclick="testTasks()">Get Tasks</button>
+    </div>
+    
+    <pre id="output"></pre>
+
+    <script>
+        let authToken = null;
+        const output = document.getElementById('output');
+
+        async function login() {
+            output.textContent = 'Logging in...\n';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: document.getElementById('email').value,
+                        password: document.getElementById('password').value
+                    })
+                });
+                
+                const data = await response.json();
+                output.textContent += `Status: ${response.status}\n`;
+                output.textContent += `Response: ${JSON.stringify(data, null, 2)}\n`;
+                
+                if (data.token) {
+                    authToken = data.token;
+                    output.textContent += `\n✅ Token received: ${authToken.substring(0, 50)}...\n`;
+                    
+                    // Decode token to see payload
+                    const parts = authToken.split('.');
+                    if (parts.length === 3) {
+                        const payload = JSON.parse(atob(parts[1]));
+                        output.textContent += `\nToken Payload:\n${JSON.stringify(payload, null, 2)}\n`;
+                    }
+                } else {
+                    output.textContent += '\n❌ No token in response\n';
+                }
+            } catch (error) {
+                output.textContent += `\n❌ Error: ${error.message}\n`;
+            }
+        }
+
+        async function testTasks() {
+            if (!authToken) {
+                output.textContent += '\n❌ Please login first!\n';
+                return;
+            }
+            
+            output.textContent += '\n\nTesting tasks API...\n';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/tasks', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                output.textContent += `Status: ${response.status}\n`;
+                output.textContent += `Response: ${JSON.stringify(data, null, 2)}\n`;
+                
+                if (response.ok) {
+                    output.textContent += `\n✅ Got ${data.length} tasks\n`;
+                } else {
+                    output.textContent += `\n❌ Failed to get tasks\n`;
+                }
+            } catch (error) {
+                output.textContent += `\n❌ Error: ${error.message}\n`;
+            }
+        }
+    </script>
+</body>
+</html>

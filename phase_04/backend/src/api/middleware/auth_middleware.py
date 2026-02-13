@@ -1,14 +1,26 @@
 """Authentication middleware for the AI Chatbot with MCP application."""
 
-from fastapi import Request, HTTPException, status
+from fastapi import Request, status
 from fastapi.responses import JSONResponse
-from src.services.auth_service import verify_token
 import logging
 
 logger = logging.getLogger(__name__)
 
+def add_cors_headers(response):
+    """Add CORS headers to response."""
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
+
 async def auth_middleware(request: Request, call_next):
     """Middleware to handle authentication for all requests."""
+    # Allow OPTIONS requests (CORS preflight) to pass through without auth
+    if request.method == "OPTIONS":
+        response = await call_next(request)
+        return response
+    
     # Skip authentication for health check and public endpoints
     public_paths = [
         "/", "/health", "/docs", "/redoc", "/openapi.json", "/favicon.ico", "/favicon.png",
@@ -38,28 +50,50 @@ async def auth_middleware(request: Request, call_next):
 
     if not auth_header or not auth_header.startswith("Bearer "):
         logger.warning(f"No valid auth header for protected endpoint {request.url.path}")
-        return JSONResponse(
+        response = JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": "Not authenticated"}
         )
+        return add_cors_headers(response)
     
     # Extract and verify token
     token = auth_header.split(" ")[1]
     try:
-        payload = verify_token(token)
+        # Decode the JWT token
+        import jwt
+        from src.config import settings
+        
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+        logger.info(f"Token decoded successfully: {payload}")
+        
         # Store user info in request state for route handlers
         request.state.user = {
-            "user_id": payload.get("sub"),
+            "user_id": payload.get("sub") or payload.get("userId") or payload.get("user_id"),
             "email": payload.get("email"),
             "name": payload.get("name")
         }
         logger.info(f"✅ Auth successful for user: {payload.get('email')}")
-    except Exception as e:
-        logger.error(f"Token verification failed: {e}")
-        return JSONResponse(
+    except jwt.ExpiredSignatureError:
+        logger.error("Token has expired")
+        response = JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "Token has expired"}
+        )
+        return add_cors_headers(response)
+    except jwt.InvalidTokenError as e:
+        logger.error(f"Invalid token: {e}")
+        response = JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": "Invalid or expired token"}
         )
+        return add_cors_headers(response)
+    except Exception as e:
+        logger.error(f"Token verification failed: {e}")
+        response = JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "Invalid or expired token"}
+        )
+        return add_cors_headers(response)
 
     response = await call_next(request)
     return response
