@@ -34,21 +34,21 @@ def get_my_tasks(session: Session = Depends(get_db)):
         logger.info(f"Found user ID: {user_id}")
         
         # Get all tasks for this user
-        tasks_query = text("SELECT * FROM task WHERE user_id = :user_id ORDER BY created_at DESC")
+        tasks_query = text("SELECT id, title, description, status, user_id, created_at, updated_at, completed_at FROM task WHERE user_id = :user_id ORDER BY created_at DESC")
         result = session.execute(tasks_query, {"user_id": user_id})
         
         tasks = []
         for row in result:
-            # Column order: title, description, completed, user_id, id, created_at, updated_at
+            # Column order: id, title, description, status, user_id, created_at, updated_at, completed_at
             task = {
-                "id": str(row[4]),  # id is 5th column
-                "title": row[0],  # title is 1st column
-                "description": row[1],  # description is 2nd column
-                "status": "completed" if row[2] else "pending",  # completed is 3rd column
-                "user_id": str(row[3]),  # user_id is 4th column
-                "created_at": row[5].isoformat() if row[5] else None,  # created_at is 6th
-                "updated_at": row[6].isoformat() if row[6] else None,  # updated_at is 7th
-                "completed_at": None
+                "id": str(row[0]),  # id
+                "title": row[1],  # title
+                "description": row[2],  # description
+                "status": row[3],  # status
+                "user_id": str(row[4]),  # user_id
+                "created_at": row[5].isoformat() if row[5] else None,  # created_at
+                "updated_at": row[6].isoformat() if row[6] else None,  # updated_at
+                "completed_at": row[7].isoformat() if row[7] else None  # completed_at
             }
             tasks.append(task)
         

@@ -55,18 +55,18 @@ async def get_user_from_token(authorization: str = Header(None), db: Session = D
         
         logger.info(f"Looking for user: {user_id}")
         
-        # Try to find user in database
+        # Try to find user in database by email first (more reliable)
         try:
-            user = db.query(User).filter(User.id == user_id).first()
+            user = db.query(User).filter(User.email == email).first()
             
             if user:
-                logger.info(f"✅ User found: {user.email}")
+                logger.info(f"✅ User found by email: {user.email} (ID: {user.id})")
                 return user
             
-            # Try to find by email if not found by ID
-            user = db.query(User).filter(User.email == email).first()
+            # Try by ID if email lookup failed
+            user = db.query(User).filter(User.id == user_id).first()
             if user:
-                logger.info(f"✅ User found by email: {user.email}")
+                logger.info(f"✅ User found by ID: {user.email}")
                 return user
             
             # User doesn't exist, create it
@@ -146,14 +146,8 @@ async def chat_simple(
         logger.info(f"📨 Chat request from user {user_id}: {request.message}")
         logger.info(f"👤 Authenticated user: {current_user.email} (ID: {current_user.id})")
         
-        # Use authenticated user's ID (from token) instead of path parameter
-        # TEMPORARY FIX: Use hardcoded user ID for asfaqasim145@gmail.com
-        if current_user.email == "asfaqasim145@gmail.com":
-            actual_user_id = "add60fd1-792f-4ab9-9a53-e2f859482c59"
-            logger.info(f"🔧 Using hardcoded user ID for {current_user.email}: {actual_user_id}")
-        else:
-            actual_user_id = str(current_user.id)
-        
+        # Use the actual user ID from database (current_user is fetched from DB)
+        actual_user_id = str(current_user.id)
         logger.info(f"🔑 Using user ID: {actual_user_id}")
         
         # Generate conversation ID if not provided
@@ -191,18 +185,11 @@ async def chat_simple(
                 db_url = settings.database_url
                 is_postgres = 'postgresql' in db_url.lower()
                 
-                if is_postgres:
-                    # PostgreSQL requires ENUM cast
-                    query_text = text("""
-                        INSERT INTO tasks (id, title, description, status, user_id, created_at, updated_at)
-                        VALUES (:id, :title, :description, :status::taskstatus, :user_id, :created_at, :updated_at)
-                    """)
-                else:
-                    # SQLite doesn't support ENUM cast
-                    query_text = text("""
-                        INSERT INTO tasks (id, title, description, status, user_id, created_at, updated_at)
-                        VALUES (:id, :title, :description, :status, :user_id, :created_at, :updated_at)
-                    """)
+                # Use simple string value for status, no type casting needed
+                query_text = text("""
+                    INSERT INTO task (id, title, description, status, user_id, created_at, updated_at)
+                    VALUES (:id, :title, :description, :status, :user_id, :created_at, :updated_at)
+                """)
                 
                 db.execute(query_text, {
                     "id": task_id,
@@ -216,7 +203,7 @@ async def chat_simple(
                 db.commit()
                 
                 # Fetch the created task
-                fetch_query = text("SELECT * FROM tasks WHERE id = :id")
+                fetch_query = text("SELECT * FROM task WHERE id = :id")
                 result = db.execute(fetch_query, {"id": task_id})
                 row = result.fetchone()
                 
@@ -353,18 +340,11 @@ async def chat_simple(
                         db_url = settings.database_url
                         is_postgres = 'postgresql' in db_url.lower()
                         
-                        if is_postgres:
-                            # PostgreSQL requires ENUM cast
-                            query_text = text("""
-                                INSERT INTO tasks (id, title, description, status, user_id, created_at, updated_at)
-                                VALUES (:id, :title, :description, :status::taskstatus, :user_id, :created_at, :updated_at)
-                            """)
-                        else:
-                            # SQLite doesn't support ENUM cast
-                            query_text = text("""
-                                INSERT INTO tasks (id, title, description, status, user_id, created_at, updated_at)
-                                VALUES (:id, :title, :description, :status, :user_id, :created_at, :updated_at)
-                            """)
+                        # Use simple string value for status, no type casting needed
+                        query_text = text("""
+                            INSERT INTO task (id, title, description, status, user_id, created_at, updated_at)
+                            VALUES (:id, :title, :description, :status, :user_id, :created_at, :updated_at)
+                        """)
                         
                         db.execute(query_text, {
                             "id": task_id,
@@ -378,7 +358,7 @@ async def chat_simple(
                         db.commit()
                         
                         # Fetch the created task
-                        fetch_query = text("SELECT * FROM tasks WHERE id = :id")
+                        fetch_query = text("SELECT * FROM task WHERE id = :id")
                         result = db.execute(fetch_query, {"id": task_id})
                         row = result.fetchone()
                         

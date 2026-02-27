@@ -16,7 +16,7 @@ async def auth_middleware(request: Request, call_next):
     # Skip authentication for health check and public endpoints ONLY
     public_paths = [
         "/", "/health", "/docs", "/redoc", "/openapi.json", "/favicon.ico", "/favicon.png",
-        "/login", "/register", "/signup"
+        "/login", "/register", "/signup", "/api/my-tasks"
     ]
 
     # Check if path EXACTLY matches or starts with public paths
