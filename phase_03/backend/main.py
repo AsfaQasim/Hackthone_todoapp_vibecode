@@ -3,6 +3,10 @@
 import sys
 import os
 
+# Load environment variables FIRST
+from dotenv import load_dotenv
+load_dotenv()
+
 # Add the src directory to the path so imports work correctly
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 

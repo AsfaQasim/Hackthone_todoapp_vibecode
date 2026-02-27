@@ -4,9 +4,15 @@ from typing import Generator
 from sqlmodel import create_engine, Session, SQLModel
 from config import settings
 import os
+
+# Load environment variables FIRST before reading DATABASE_URL
+from dotenv import load_dotenv
+load_dotenv()
+
 # db
 # Create the database engine with proper configuration
 DATABASE_URL = os.getenv("DATABASE_URL")
+print(f"[DB DEBUG] DATABASE_URL from env: {DATABASE_URL[:50] if DATABASE_URL else 'NOT SET'}")
 
 if not DATABASE_URL:
     DATABASE_URL = settings.database_url
@@ -14,6 +20,9 @@ if not DATABASE_URL:
 # Fix postgres scheme for SQLAlchemy
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+print(f"[DB DEBUG] Final DATABASE_URL being used: {DATABASE_URL[:80]}...")
+print(f"[DB DEBUG] Database type: {'PostgreSQL' if 'postgresql' in DATABASE_URL else 'SQLite'}")
 
 engine = create_engine(
     DATABASE_URL,

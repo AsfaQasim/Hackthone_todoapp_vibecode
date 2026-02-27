@@ -9,26 +9,31 @@ logger = logging.getLogger(__name__)
 
 async def auth_middleware(request: Request, call_next):
     """Middleware to handle authentication for all requests."""
-    # Skip authentication for health check and public endpoints
+    print(f"\n{'='*60}")
+    print(f"🔐 AUTH MIDDLEWARE - Path: {request.url.path}")
+    print(f"{'='*60}")
+    
+    # Skip authentication for health check and public endpoints ONLY
     public_paths = [
         "/", "/health", "/docs", "/redoc", "/openapi.json", "/favicon.ico", "/favicon.png",
-        "/api/login", "/api/register", "/api/signup",
-        "/api/auth/login", "/api/auth/register", "/api/auth/signup",
-        "/login", "/register", "/signup", "/auth/login", "/auth/register", "/auth/signup",
-        "/api/my-tasks"  # Temporary: Allow tasks endpoint without auth
+        "/login", "/register", "/signup"
     ]
 
-    # Also check for paths that start with auth patterns or contain specific patterns
-    is_public = any(request.url.path.startswith(path) for path in public_paths)
+    # Check if path EXACTLY matches or starts with public paths
+    is_public = False
+    for public_path in public_paths:
+        if request.url.path == public_path or (public_path != "/" and request.url.path.startswith(public_path)):
+            is_public = True
+            break
     
-    # Temporary: Allow /api/{user_id}/tasks without auth
-    if "/tasks" in request.url.path:
-        is_public = True
+    print(f"Is public path: {is_public}")
+    print(f"Public paths checked: {public_paths}")
 
     # Log the request path and whether it's public
     logger.info(f"Auth middleware: Path={request.url.path}, is_public={is_public}")
 
     if is_public:
+        print(f"✅ Skipping auth for public endpoint")
         logger.info(f"Skipping auth for public endpoint: {request.url.path}")
         response = await call_next(request)
         return response
@@ -36,13 +41,22 @@ async def auth_middleware(request: Request, call_next):
     # For non-public paths, check if authentication is provided
     # Extract token from Authorization header
     auth_header = request.headers.get("Authorization")
-    logger.info(f"Auth header received: {auth_header}")  # Detailed log
+    
+    print(f"Authorization header present: {bool(auth_header)}")
+    if auth_header:
+        print(f"Authorization header (first 30 chars): {auth_header[:30]}...")
+    else:
+        print(f"❌ NO AUTHORIZATION HEADER FOUND!")
+        print(f"All headers: {list(request.headers.keys())}")
+    
+    logger.info(f"Auth middleware: Checking auth for {request.url.path}")
+    logger.info(f"Auth header present: {bool(auth_header)}")
+    if auth_header:
+        logger.info(f"Auth header value (first 30 chars): {auth_header[:30]}...")
 
     if not auth_header or not auth_header.startswith("Bearer "):
+        print(f"❌ Returning 401 - Not authenticated")
         logger.warning(f"No valid auth header for protected endpoint {request.url.path}")
-        # If no token is provided, return 401
-        # But note: some routes may handle authentication differently
-        # so we'll let them override this if needed
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": "Not authenticated"}
@@ -67,14 +81,14 @@ async def auth_middleware(request: Request, call_next):
             "email": token_data.email
         }
     except HTTPException as e:
-        logger.error(f"HTTP Exception in token verification for token {token[:15]}...: {e}")
+        logger.error(f"HTTP Exception in token verification: {e.detail}")
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": "Invalid authentication credentials"}
         )
     except Exception as e:
         # Catch any other exceptions to prevent raw tracebacks
-        logger.error(f"Unexpected error in auth middleware for token {token[:15]}...: {e}")
+        logger.error(f"Unexpected error in auth middleware: {e}")
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": "Authentication error"}

@@ -81,30 +81,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initAuthState = () => {
       try {
+        console.log('🔄 [AuthProvider] Initializing auth state...');
+        
         // Get token from cookies
         const token = getTokenFromCookies();
+        console.log('🔑 [AuthProvider] Token found:', token ? 'Yes' : 'No');
 
         if (token) {
           // Decode token to get user info
           const decoded = decodeToken(token);
+          console.log('📝 [AuthProvider] Decoded token:', decoded);
 
           if (decoded) {
-            setUser({
+            const userData = {
               id: decoded.sub,
               email: decoded.email,
               name: decoded.name
-            });
+            };
+            setUser(userData);
+            console.log('✅ [AuthProvider] User set from token:', userData);
           } else {
             // Token is invalid, remove it
+            console.warn('⚠️ [AuthProvider] Token invalid, removing...');
             removeTokenFromCookies();
           }
+        } else {
+          console.log('ℹ️ [AuthProvider] No token found, user not logged in');
         }
       } catch (error) {
-        console.error('Error initializing auth state:', error);
+        console.error('❌ [AuthProvider] Error initializing auth state:', error);
         // Clear any potentially corrupted token
         removeTokenFromCookies();
       } finally {
         setLoading(false);
+        console.log('✅ [AuthProvider] Auth initialization complete');
       }
     };
 
@@ -116,24 +126,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      console.log('Attempting login with email:', email);
+      console.log('🔐 [AuthContext] Attempting login with email:', email);
+      console.log('🔐 [AuthContext] API URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000');
 
       // Call the login API
       const result = await signInFn({ email, password });
-      console.log('Login API result:', result);
+      console.log('📥 [AuthContext] Login API result:', result);
 
       if (result.error) {
-        console.error('Login API error:', result.error.message);
+        console.error('❌ [AuthContext] Login API error:', result.error.message);
+        console.error('❌ [AuthContext] Full error object:', result.error);
         return false;
       }
 
       // Check if we received a token in the response
       if (result.data && result.data.access_token) {
+        console.log('✅ [AuthContext] Received access token');
+        
         // Save the token to cookies
         saveTokenToCookies(result.data.access_token);
+        console.log('✅ [AuthContext] Token saved to cookies');
 
         // Decode the token to get user info
         const decoded = decodeToken(result.data.access_token);
+        console.log('✅ [AuthContext] Token decoded:', decoded);
 
         if (decoded) {
           // Set user state immediately
@@ -143,18 +159,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             name: decoded.name
           });
 
-          console.log('Login successful, user set:', decoded);
+          console.log('✅ [AuthContext] Login successful, user set:', decoded);
           return true;
         } else {
-          console.error('Could not decode token after login');
+          console.error('❌ [AuthContext] Could not decode token after login');
           return false;
         }
       } else {
-        console.error('No access_token in login response');
+        console.error('❌ [AuthContext] No access_token in login response');
+        console.error('❌ [AuthContext] Response data:', result.data);
         return false;
       }
     } catch (error) {
-      console.error('Login exception:', error);
+      console.error('❌ [AuthContext] Login exception:', error);
+      console.error('❌ [AuthContext] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       return false;
     }
   };

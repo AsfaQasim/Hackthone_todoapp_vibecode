@@ -18,6 +18,7 @@ class MessageRole(str, Enum):
 class UserBase(SQLModel):
     email: str = Field(unique=True, index=True)
     name: str
+    password: str  # Added password field to match database schema
 
 class User(UserBase, table=True):
     __tablename__ = "user"  # Match actual database table name

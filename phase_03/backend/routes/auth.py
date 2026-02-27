@@ -36,6 +36,11 @@ def login(login_request: LoginRequest, db: Session = Depends(get_db)):
     """
     Login endpoint that validates credentials against the database
     """
+    print(f"\n{'='*60}")
+    print(f"🔐 LOGIN ENDPOINT HIT!")
+    print(f"📧 Email: {login_request.email}")
+    print(f"{'='*60}\n")
+    
     try:
         from src.models.base_models import User
         
@@ -53,9 +58,14 @@ def login(login_request: LoginRequest, db: Session = Depends(get_db)):
             logger.info(f"✅ Existing user found: {existing_user.email} (ID: {user_id})")
             logger.info(f"🎯 USING EXISTING USER ID: {user_id}")
         else:
-            # User doesn't exist, create new user
+            # User doesn't exist, create new user with hashed password
             import uuid
+            import hashlib
+            
             user_id = str(uuid.uuid4())
+            
+            # Simple password hashing (in production, use bcrypt or passlib)
+            password_hash = hashlib.sha256(login_request.password.encode()).hexdigest()
             
             logger.info(f"⚠️  User not found in database, creating new user")
             logger.info(f"🆕 NEW USER ID: {user_id}")
@@ -63,7 +73,8 @@ def login(login_request: LoginRequest, db: Session = Depends(get_db)):
             new_user = User(
                 id=user_id,
                 email=login_request.email,
-                name=login_request.email.split('@')[0]
+                name=login_request.email.split('@')[0],
+                password=password_hash  # Store hashed password
             )
             
             db.add(new_user)
@@ -107,6 +118,7 @@ def register(register_request: RegisterRequest, db: Session = Depends(get_db)):
     try:
         from src.models.base_models import User
         import uuid
+        import hashlib
         
         # Generate user ID
         user_id = uuid.uuid4()
@@ -130,11 +142,15 @@ def register(register_request: RegisterRequest, db: Session = Depends(get_db)):
                 "user_id": str(existing_user.id)
             }
         
+        # Hash password
+        password_hash = hashlib.sha256(register_request.password.encode()).hexdigest()
+        
         # Create new user in database
         new_user = User(
             id=user_id,
             email=register_request.email,
-            name=register_request.name or register_request.email.split('@')[0]
+            name=register_request.name or register_request.email.split('@')[0],
+            password=password_hash
         )
         
         db.add(new_user)

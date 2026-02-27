@@ -10,18 +10,24 @@ class Settings(BaseSettings):
     # Database settings
     @property
     def database_url(self) -> str:
-        env_database_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:password@localhost/dbname")
-        if not os.getenv("ENVIRONMENT") or os.getenv("ENVIRONMENT") == "development":
-            # Check if it's the default PostgreSQL URL or the production Neon URL
-            if "neon.tech" in env_database_url or "postgresql" in env_database_url:
-                # Use absolute path to ensure consistency regardless of working directory
-                import pathlib
-                db_path = pathlib.Path(__file__).parent.parent.parent / "todo_app_local.db"
-                return f"sqlite:///{db_path.as_posix()}"
-            else:
-                return env_database_url
-        else:
+        # Force load from environment
+        from dotenv import load_dotenv
+        load_dotenv()
+        
+        env_database_url = os.getenv("DATABASE_URL")
+        
+        print(f"[CONFIG DEBUG] DATABASE_URL from env: {env_database_url[:50] if env_database_url else 'NOT SET'}")
+        
+        # If DATABASE_URL is set and not the default, use it
+        if env_database_url and "postgresql" in env_database_url:
+            print(f"[CONFIG DEBUG] Using PostgreSQL from environment")
             return env_database_url
+        
+        # Fallback to SQLite
+        print(f"[CONFIG DEBUG] Falling back to SQLite")
+        import pathlib
+        db_path = pathlib.Path(__file__).parent.parent.parent / "todo_app_local.db"
+        return f"sqlite:///{db_path.as_posix()}"
     
     # JWT settings
     secret_key: str = os.getenv("BETTER_AUTH_SECRET", "your-secret-key-change-in-production")

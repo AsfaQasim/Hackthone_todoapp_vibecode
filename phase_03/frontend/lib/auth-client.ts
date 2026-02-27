@@ -64,6 +64,8 @@ export function getJwt() {
 // Sign in function - uses our custom API route
 export async function signIn(credentials: { email: string; password: string }, options?: { callbackURL?: string }) {
   try {
+    console.log('🔐 [auth-client] Calling /api/login with email:', credentials.email);
+    
     const response = await fetch('/api/login', {
       method: 'POST',
       headers: {
@@ -72,15 +74,22 @@ export async function signIn(credentials: { email: string; password: string }, o
       body: JSON.stringify(credentials),
     });
 
+    console.log('📥 [auth-client] Response status:', response.status);
+    console.log('📥 [auth-client] Response ok:', response.ok);
+
     const data = await response.json();
+    console.log('📥 [auth-client] Response data:', data);
 
     if (response.ok) {
+      console.log('✅ [auth-client] Login successful');
       return { data, error: null };
     } else {
+      console.error('❌ [auth-client] Login failed:', data.error || data);
       return { data: null, error: { message: data.error || 'Login failed' } };
     }
   } catch (error) {
-    console.error("Sign in error:", error);
+    console.error("❌ [auth-client] Sign in error:", error);
+    console.error("❌ [auth-client] Error details:", error instanceof Error ? error.message : 'Unknown error');
     return { error: { message: 'Network error occurred' }, data: null };
   }
 }

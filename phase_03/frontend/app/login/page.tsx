@@ -25,19 +25,29 @@ export default function LoginPage() {
     setError('');
 
     try {
-      console.log('Calling login function...');
+      console.log('🔐 [LoginPage] Calling login function...');
+      console.log('📧 [LoginPage] Email:', email);
+      
       const success = await login(email, password);
-      console.log('Login function returned:', success);
+      console.log('📥 [LoginPage] Login function returned:', success);
 
       if (!success) {
-        setError('Invalid email or password');
+        console.error('❌ [LoginPage] Login failed');
+        console.error('❌ [LoginPage] Check previous logs for error details');
+        setError('Invalid email or password. Please check the console for details.');
       } else {
-        console.log('Login successful, GuestOnlyRoute will handle redirect...');
-        // Redirect is handled by GuestOnlyRoute component
+        console.log('✅ [LoginPage] Login successful!');
+        console.log('✅ [LoginPage] Redirecting to dashboard...');
+        
+        // Small delay to ensure cookie is set
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 100);
       }
     } catch (err) {
-      setError('An unexpected error occurred');
-      console.error(err);
+      console.error('❌ [LoginPage] Exception:', err);
+      console.error('❌ [LoginPage] Exception details:', err instanceof Error ? err.message : 'Unknown error');
+      setError('An unexpected error occurred. Check console for details.');
     } finally {
       setIsLoading(false);
     }
@@ -142,7 +152,7 @@ export default function LoginPage() {
                     transition={{ delay: 0.6 }}
                     className="text-sm text-gray-400"
                   >
-                    Don't have an account?{' '}
+                    Don&apos;t have an account?{' '}
                     <a
                       href="/signup"
                       className="font-medium text-cyan-400 hover:text-cyan-300 transition-colors"

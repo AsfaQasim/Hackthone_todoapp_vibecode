@@ -1,116 +1,64 @@
 import { NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
-import { 
-  getTaskById, 
-  updateTask, 
-  deleteTask as deleteTaskFromDb 
-} from '../../../../lib/db/tasks-model';
 
-// Helper function to get user ID from auth token in cookies
-async function getUserIdFromRequest(request: Request): Promise<number | null> {
-  try {
-    // Get the authorization header
-    const authHeader = request.headers.get('Authorization');
-    let token = null;
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7);
-    } else {
-      // If no Authorization header, try to get token from cookies
-      // Extract cookies from the request
-      const cookiesHeader = request.headers.get('cookie');
-      if (cookiesHeader) {
-        // Parse the cookies to find the auth_token
-        const cookies = cookiesHeader.split(';').reduce((acc, cookie) => {
-          const [name, value] = cookie.trim().split('=');
-          acc[name] = value;
-          return acc;
-        }, {} as Record<string, string>);
-
-        token = cookies.auth_token;
-      }
-    }
-
-    if (!token) {
-      console.log('No auth token found in request');
-      return null;
-    }
-
-    // Decode the JWT token to get user info
-    // In a real app, you'd use the actual JWT secret from environment variables
-    const decoded: any = jwt.verify(token, process.env.BETTER_AUTH_SECRET || process.env.JWT_SECRET || 'fallback_secret');
-    return decoded.userId;
-  } catch (error) {
-    console.error('Error decoding token:', error);
-    return null;
-  }
-}
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Await the params promise to resolve
     const resolvedParams = await params;
+    const taskId = resolvedParams.id;
 
-    console.log('PUT - Received params.id:', resolvedParams?.id, 'Type:', typeof resolvedParams?.id);
+    console.log('🔄 [PUT /api/tasks/[id]] Proxying update request for task:', taskId);
 
-    // Ensure params.id is a string before parsing
-    if (!resolvedParams?.id || typeof resolvedParams?.id !== 'string') {
-      console.log('PUT - Missing or invalid task ID parameter:', resolvedParams?.id);
-      return NextResponse.json(
-        { error: 'Missing or invalid task ID' },
-        { status: 400 }
-      );
+    // Get the authorization header
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+      console.log('❌ [PUT /api/tasks/[id]] No authorization header');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Remove any potential extra characters and parse
-    const cleanedId = resolvedParams.id.toString().trim();
-    const taskId = parseInt(cleanedId);
+    // Extract user ID from token
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = JSON.parse(atob(token.split('.')[1]));
+    const userId = decoded.sub || decoded.userId || decoded.user_id;
 
-    if (isNaN(taskId)) {
-      console.log('PUT - Invalid task ID after parsing:', resolvedParams.id, 'Cleaned:', cleanedId);
-      return NextResponse.json(
-        { error: 'Invalid task ID' },
-        { status: 400 }
-      );
-    }
+    console.log('👤 [PUT /api/tasks/[id]] User ID from token:', userId);
 
-    const { title, description, completed } = await request.json();
+    // Get request body
+    const body = await request.json();
+    console.log('📦 [PUT /api/tasks/[id]] Request body:', body);
 
-    // Get user ID from the request
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    // Forward to backend
+    const backendUrl = `${BACKEND_URL}/api/${userId}/tasks/${taskId}`;
+    console.log('📡 [PUT /api/tasks/[id]] Forwarding to:', backendUrl);
 
-    console.log(`Attempting to update task ${taskId} for user ${userId}`);
-
-    // Verify that the task belongs to the user
-    const existingTask = await getTaskById(taskId, userId);
-    if (!existingTask) {
-      console.log(`Task ${taskId} not found for user ${userId}`);
-      return NextResponse.json(
-        { error: 'Task not found or unauthorized' },
-        { status: 404 }
-      );
-    }
-
-    // Update the task
-    const updatedTask = await updateTask(taskId, userId, {
-      title,
-      description,
-      completed
+    const response = await fetch(backendUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader,
+      },
+      body: JSON.stringify(body),
     });
 
-    console.log(`Successfully updated task ${taskId} for user ${userId}`);
-    return NextResponse.json(updatedTask, { status: 200 });
+    console.log('📥 [PUT /api/tasks/[id]] Backend response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ [PUT /api/tasks/[id]] Backend error:', errorText);
+      return NextResponse.json(
+        { error: errorText || 'Failed to update task' },
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+    console.log('✅ [PUT /api/tasks/[id]] Task updated successfully');
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error updating task:', error);
+    console.error('❌ [PUT /api/tasks/[id]] Error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -123,73 +71,52 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Await the params promise to resolve
     const resolvedParams = await params;
+    const taskId = resolvedParams.id;
 
-    console.log('Received params.id:', resolvedParams?.id, 'Type:', typeof resolvedParams?.id);
+    console.log('🗑️ [DELETE /api/tasks/[id]] Proxying delete request for task:', taskId);
 
-    // Ensure params.id is a string before parsing
-    if (!resolvedParams?.id || typeof resolvedParams?.id !== 'string') {
-      console.log('Missing or invalid task ID parameter:', resolvedParams?.id);
+    // Get the authorization header
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+      console.log('❌ [DELETE /api/tasks/[id]] No authorization header');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Extract user ID from token
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = JSON.parse(atob(token.split('.')[1]));
+    const userId = decoded.sub || decoded.userId || decoded.user_id;
+
+    console.log('👤 [DELETE /api/tasks/[id]] User ID from token:', userId);
+
+    // Forward to backend
+    const backendUrl = `${BACKEND_URL}/api/${userId}/tasks/${taskId}`;
+    console.log('📡 [DELETE /api/tasks/[id]] Forwarding to:', backendUrl);
+
+    const response = await fetch(backendUrl, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': authHeader,
+      },
+    });
+
+    console.log('📥 [DELETE /api/tasks/[id]] Backend response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ [DELETE /api/tasks/[id]] Backend error:', errorText);
       return NextResponse.json(
-        { error: 'Missing or invalid task ID' },
-        { status: 400 }
+        { error: errorText || 'Failed to delete task' },
+        { status: response.status }
       );
     }
 
-    // Remove any potential extra characters and parse
-    const cleanedId = resolvedParams.id.toString().trim();
-    const taskId = parseInt(cleanedId);
-
-    if (isNaN(taskId)) {
-      console.log('Invalid task ID after parsing:', resolvedParams.id, 'Cleaned:', cleanedId);
-      return NextResponse.json(
-        { error: 'Invalid task ID' },
-        { status: 400 }
-      );
-    }
-
-    // Get user ID from the request
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      console.log('Unauthorized: No user ID found');
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    console.log(`Attempting to delete task ${taskId} for user ${userId}`);
-
-    // Verify that the task belongs to the user
-    const existingTask = await getTaskById(taskId, userId);
-    if (!existingTask) {
-      console.log(`Task ${taskId} not found for user ${userId}`);
-      return NextResponse.json(
-        { error: 'Task not found or unauthorized' },
-        { status: 404 }
-      );
-    }
-
-    // Delete the task
-    const deletedRowCount = await deleteTaskFromDb(taskId, userId);
-    console.log(`Deleted ${deletedRowCount} rows`);
-
-    if (deletedRowCount === 0) {
-      console.log(`Failed to delete task ${taskId} for user ${userId}`);
-      return NextResponse.json(
-        { error: 'Task not found or unauthorized' },
-        { status: 404 }
-      );
-    }
-
-    console.log(`Successfully deleted task ${taskId} for user ${userId}`);
-    return NextResponse.json(
-      { message: 'Task deleted successfully' },
-      { status: 200 }
-    );
+    const data = await response.json();
+    console.log('✅ [DELETE /api/tasks/[id]] Task deleted successfully');
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error deleting task:', error);
+    console.error('❌ [DELETE /api/tasks/[id]] Error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

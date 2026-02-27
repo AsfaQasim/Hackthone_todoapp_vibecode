@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
+import { motion } from 'framer-motion';
+import { Sparkles } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -23,18 +25,45 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // Redirect after render when conditions are met
   React.useEffect(() => {
     if (!loading && !user) {
+      console.log('🔒 ProtectedRoute: No user found, redirecting to login');
       router.replace('/login');
     }
   }, [user, loading, router]);
 
-  // Don't render anything while loading or when redirect is needed
+  // Show loading spinner while checking auth status
   if (loading) {
-    return null; // Don't render anything while checking auth status
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="mx-auto mb-4"
+          >
+            <Sparkles className="h-12 w-12 text-cyan-400" />
+          </motion.div>
+          <p className="text-gray-300 text-lg">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
-  // If user is not authenticated after loading completes, return null (redirect will happen via useEffect)
+  // If user is not authenticated after loading completes, show loading while redirecting
   if (!user) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="mx-auto mb-4"
+          >
+            <Sparkles className="h-12 w-12 text-cyan-400" />
+          </motion.div>
+          <p className="text-gray-300 text-lg">Redirecting to login...</p>
+        </div>
+      </div>
+    );
   }
 
   // User is authenticated, show the protected content
@@ -52,18 +81,45 @@ export const GuestOnlyRoute = ({ children }: GuestOnlyRouteProps) => {
   // Redirect after render when conditions are met
   React.useEffect(() => {
     if (!loading && user) {
+      console.log('👤 GuestOnlyRoute: User found, redirecting to dashboard');
       router.replace('/dashboard');
     }
   }, [user, loading, router]);
 
-  // Don't render anything while loading or when redirect is needed
+  // Show loading spinner while checking auth status
   if (loading) {
-    return null; // Don't render anything while checking auth status
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="mx-auto mb-4"
+          >
+            <Sparkles className="h-12 w-12 text-cyan-400" />
+          </motion.div>
+          <p className="text-gray-300 text-lg">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
-  // If user is authenticated after loading completes, return null (redirect will happen via useEffect)
+  // If user is authenticated after loading completes, show loading while redirecting
   if (user) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="mx-auto mb-4"
+          >
+            <Sparkles className="h-12 w-12 text-cyan-400" />
+          </motion.div>
+          <p className="text-gray-300 text-lg">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   // User is not authenticated, show the guest-only content
