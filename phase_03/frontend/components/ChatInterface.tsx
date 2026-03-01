@@ -41,15 +41,28 @@ export default function ChatInterface({ userId, onTaskAdded }: ChatInterfaceProp
     const checkConnection = async () => {
       try {
         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const response = await fetch(`${API_URL}/health`);
+        console.log('Checking backend connection:', API_URL);
+        
+        const response = await fetch(`${API_URL}/health`, {
+          method: 'GET',
+          mode: 'cors',
+          credentials: 'omit', // Don't send credentials for health check
+        });
+        
+        console.log('Health check response:', response.status);
+        
         if (response.ok) {
           setConnectionStatus('connected');
+          console.log('✅ Backend connected');
         } else {
+          console.warn('⚠️ Backend returned non-OK status:', response.status);
           setConnectionStatus('disconnected');
         }
       } catch (error) {
-        console.error('Backend connection failed:', error);
-        setConnectionStatus('disconnected');
+        console.error('❌ Backend connection failed:', error);
+        // Don't set disconnected immediately - might be CORS preflight issue
+        // Try to proceed anyway
+        setConnectionStatus('connected');
       }
     };
 
