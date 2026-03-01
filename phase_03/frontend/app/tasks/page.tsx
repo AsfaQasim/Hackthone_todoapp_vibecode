@@ -14,7 +14,7 @@ import { ProtectedRoute } from '../../components/RouteProtector';
 
 interface Task {
   id: string | number;  // Support both UUID (string) and legacy number IDs
-  user_id: number;
+  user_id?: number | string;  // Optional, may not be present in all responses
   title: string;
   description: string;
   completed: boolean;
