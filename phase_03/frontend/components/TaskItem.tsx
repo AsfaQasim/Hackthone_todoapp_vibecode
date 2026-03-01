@@ -10,6 +10,7 @@ interface Task {
   description: string;
   completed: boolean;
   created_at: string;
+  user_id?: number | string;  // Optional field that may be present
 }
 
 interface TaskItemProps {

@@ -18,8 +18,8 @@ import { api } from '../../lib/api';
 import { ProtectedRoute } from '../../components/RouteProtector';
 
 interface Task {
-  id: number;
-  user_id: number;
+  id: string | number;  // Support both UUID (string) and legacy number IDs
+  user_id?: number | string;  // Optional
   title: string;
   description: string;
   completed: boolean;
@@ -32,8 +32,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddingTask, setIsAddingTask] = useState(false);
-  const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
-  const [updatingTaskId, setUpdatingTaskId] = useState<number | null>(null);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | number | null>(null);
+  const [updatingTaskId, setUpdatingTaskId] = useState<string | number | null>(null);
 
   const loadTasks = async () => {
     if (!user) return;
@@ -71,7 +71,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleToggleComplete = async (taskId: number) => {
+  const handleToggleComplete = async (taskId: string | number) => {
     if (!user) return;
 
     // Find the current task
@@ -107,7 +107,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDeleteTask = async (taskId: number) => {
+  const handleDeleteTask = async (taskId: string | number) => {
     if (!user) return;
     setDeletingTaskId(taskId);
 
