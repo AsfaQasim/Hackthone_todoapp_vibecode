@@ -16,6 +16,7 @@ if exist .next (
     echo .next folder not found
 )
 
+
 echo Step 3: Deleting node_modules/.cache...
 if exist node_modules\.cache (
     rmdir /s /q node_modules\.cache
